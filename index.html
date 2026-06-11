@@ -59,10 +59,13 @@
           <option value="all">全部科目</option>
         </select>
         <select id="statusFilter" aria-label="状态筛选">
-          <option value="all">全部状态</option>
+          <option value="active" selected>未掌握题</option>
+          <option value="wrong">做错了</option>
+          <option value="correct">做对了</option>
+          <option value="mastered">已掌握</option>
+          <option value="all">全部题</option>
           <option value="new">新记录</option>
           <option value="reviewing">复习中</option>
-          <option value="mastered">已掌握</option>
         </select>
         <select id="tagFilter" aria-label="标签筛选">
           <option value="all">全部标签</option>
@@ -139,6 +142,8 @@
           <span>状态</span>
           <select id="statusInput">
             <option value="new">新记录</option>
+            <option value="wrong">做错了</option>
+            <option value="correct">做对了</option>
             <option value="reviewing">复习中</option>
             <option value="mastered">已掌握</option>
           </select>
@@ -232,6 +237,8 @@
           <span>状态</span>
           <select id="reviewStatusInput">
             <option value="reviewing">复习中</option>
+            <option value="wrong">做错了</option>
+            <option value="correct">做对了</option>
             <option value="mastered">已掌握</option>
             <option value="new">新记录</option>
           </select>

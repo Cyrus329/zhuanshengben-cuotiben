@@ -578,6 +578,18 @@ textarea:focus {
   border-color: #bddcda;
 }
 
+.status-wrong {
+  color: var(--rose);
+  background: var(--rose-soft);
+  border-color: #e8bcc5;
+}
+
+.status-correct {
+  color: var(--green);
+  background: var(--green-soft);
+  border-color: #bfdfbf;
+}
+
 .status-mastered {
   color: var(--green);
   background: var(--green-soft);
@@ -593,7 +605,22 @@ textarea:focus {
 .record-actions {
   justify-content: flex-end;
   align-content: start;
-  min-width: 138px;
+  min-width: 190px;
+}
+
+.result-button.correct {
+  color: var(--green);
+  border-color: rgba(61, 122, 74, 0.26);
+}
+
+.result-button.wrong {
+  color: var(--rose);
+  border-color: rgba(168, 62, 81, 0.26);
+}
+
+.result-button.mastered {
+  color: var(--teal);
+  border-color: rgba(23, 107, 109, 0.28);
 }
 
 .record-footer {

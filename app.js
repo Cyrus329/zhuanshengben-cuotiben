@@ -101,7 +101,7 @@ const state = {
   filters: {
     query: "",
     subject: "all",
-    status: "all",
+    status: "active",
     tag: "all",
     dueOnly: false,
     sort: "newest",
@@ -496,6 +496,9 @@ function cloudErrorMessage(error) {
   if (message.includes("Could not find the function") || message.includes("study_cloud")) {
     return "还没在 Supabase 运行 setup 文件，先到 SQL Editor 执行 supabase-setup.sql。";
   }
+  if (message.includes("digest(") || message.includes("function digest")) {
+    return "Supabase 里还是旧同步函数，请重新运行最新版 supabase-setup.sql。";
+  }
   if (message.includes("invalid slug")) {
     return "公开编号只能用英文小写、数字、横线或下划线。";
   }
@@ -798,7 +801,7 @@ function normalizeRecord(record) {
     source: record.source || "作业",
     wrongAt: record.wrongAt || todayISO(),
     nextReview: record.nextReview || "",
-    status: record.status || "new",
+    status: normalizedStatus(record.status),
     difficulty: String(record.difficulty || "2"),
     question: record.question || "",
     wrongAnswer: record.wrongAnswer || "",
@@ -843,8 +846,14 @@ function statusLabel(status) {
   return {
     new: "新记录",
     reviewing: "复习中",
+    wrong: "做错了",
+    correct: "做对了",
     mastered: "已掌握",
   }[status] || "新记录";
+}
+
+function normalizedStatus(status) {
+  return ["new", "reviewing", "wrong", "correct", "mastered"].includes(status) ? status : "new";
 }
 
 function difficultyLabel(difficulty) {
@@ -871,7 +880,10 @@ function filteredRecords() {
 
     const matchesQuery = !query || haystack.includes(query);
     const matchesSubject = state.filters.subject === "all" || record.subject === state.filters.subject;
-    const matchesStatus = state.filters.status === "all" || record.status === state.filters.status;
+    const recordStatus = normalizedStatus(record.status);
+    const matchesStatus = state.filters.status === "all"
+      || (state.filters.status === "active" && recordStatus !== "mastered")
+      || recordStatus === state.filters.status;
     const matchesTag = state.filters.tag === "all" || record.tags.includes(state.filters.tag);
     const matchesDue = !state.filters.dueOnly || isDue(record);
     return matchesQuery && matchesSubject && matchesStatus && matchesTag && matchesDue;
@@ -978,16 +990,18 @@ function recordCardHTML(record) {
   const solutionExpanded = state.expandedSolutionIds.has(record.id);
   const solutionButton = hasSolution ? `
             <button class="secondary-button solution-toggle" data-action="toggle-solution" data-expanded="${solutionExpanded ? "true" : "false"}">
-              ${solutionExpanded ? "隐藏解析" : "检查解析"}
+              ${solutionExpanded ? "隐藏答案过程" : "检查答案过程"}
             </button>` : "";
-  const solutionBlock = hasSolution && solutionExpanded ? infoBlock("完整解析", record.solution, "solution-block") : "";
+  const solutionBlock = hasSolution && solutionExpanded ? infoBlock("答案过程", record.solution, "solution-block") : "";
   const actions = isPublicView() ? `
         <div class="record-actions">
           ${solutionButton}
         </div>` : `
         <div class="record-actions">
           ${solutionButton}
-          <button class="secondary-button" data-action="review">复习</button>
+          <button class="secondary-button result-button correct" data-action="mark-correct">我做对了</button>
+          <button class="secondary-button result-button wrong" data-action="mark-wrong">我做错了</button>
+          <button class="secondary-button result-button mastered" data-action="mark-mastered">掌握了</button>
           <button class="secondary-button" data-action="edit">编辑</button>
         </div>`;
 
@@ -1143,7 +1157,7 @@ function openReview(id) {
   reviewFields.date.value = todayISO();
   reviewFields.result.value = "correct";
   reviewFields.nextDate.value = nextDate;
-  reviewFields.status.value = record.reviews.length >= 2 ? "mastered" : "reviewing";
+  reviewFields.status.value = record.reviews.length >= 2 ? "mastered" : "correct";
   reviewFields.note.value = "";
   els.reviewDialog.showModal();
 }
@@ -1164,7 +1178,7 @@ function saveReview(event) {
     note: normalizeText(reviewFields.note.value),
   };
   record.reviews.push(entry);
-  record.status = reviewFields.result.value === "wrong" ? "reviewing" : reviewFields.status.value;
+  record.status = reviewFields.result.value === "wrong" ? "wrong" : normalizedStatus(reviewFields.status.value);
   record.nextReview = reviewFields.result.value === "wrong"
     ? (reviewFields.nextDate.value || addDaysISO(entry.date, 2))
     : reviewFields.nextDate.value;
@@ -1173,6 +1187,40 @@ function saveReview(event) {
   closeReview();
   render();
   showToast("复习已记录");
+}
+
+function markAttempt(recordId, result) {
+  const record = state.records.find((item) => item.id === recordId);
+  if (!record) {
+    return;
+  }
+  const today = todayISO();
+  const entry = {
+    date: today,
+    result: result === "mastered" ? "mastered" : result,
+    note: result === "correct"
+      ? "题卡快捷记录：我做对了"
+      : result === "wrong"
+        ? "题卡快捷记录：我做错了"
+        : "题卡快捷记录：已掌握",
+  };
+  record.reviews.push(entry);
+  if (result === "wrong") {
+    record.status = "wrong";
+    record.nextReview = addDaysISO(today, 2);
+  } else if (result === "correct") {
+    record.status = "correct";
+    record.nextReview = addDaysISO(today, record.reviews.length >= 2 ? 14 : 7);
+  } else if (result === "mastered") {
+    record.status = "mastered";
+    record.nextReview = "";
+  }
+  record.updatedAt = new Date().toISOString();
+  if (!saveRecords()) {
+    return;
+  }
+  render();
+  showToast(result === "correct" ? "已标记：做对了" : result === "wrong" ? "已标记：做错了" : "已放入：已掌握");
 }
 
 function renderImagePreview() {
@@ -1277,13 +1325,13 @@ function resetFilters() {
   state.filters = {
     query: "",
     subject: "all",
-    status: "all",
+    status: "active",
     tag: "all",
     dueOnly: false,
     sort: "newest",
   };
   els.searchInput.value = "";
-  els.statusFilter.value = "all";
+  els.statusFilter.value = "active";
   els.sortSelect.value = "newest";
   els.dueOnlyToggle.checked = false;
   render();
@@ -1369,6 +1417,18 @@ function wireEvents() {
       return;
     }
     if (isPublicView()) {
+      return;
+    }
+    if (button.dataset.action === "mark-correct") {
+      markAttempt(card.dataset.id, "correct");
+      return;
+    }
+    if (button.dataset.action === "mark-wrong") {
+      markAttempt(card.dataset.id, "wrong");
+      return;
+    }
+    if (button.dataset.action === "mark-mastered") {
+      markAttempt(card.dataset.id, "mastered");
       return;
     }
     if (button.dataset.action === "edit") {

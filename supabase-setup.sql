@@ -1,5 +1,3 @@
-create extension if not exists pgcrypto;
-
 create table if not exists public.study_cloud_profiles (
   slug text primary key,
   display_name text,
@@ -53,7 +51,7 @@ set search_path = public
 as $$
 declare
   v_slug text := lower(trim(p_slug));
-  v_hash text := encode(digest(coalesce(p_pin, ''), 'sha256'), 'hex');
+  v_hash text := md5(coalesce(p_pin, ''));
   v_existing text;
   v_record jsonb;
   v_count integer := 0;
