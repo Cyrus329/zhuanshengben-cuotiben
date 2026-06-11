@@ -11,6 +11,26 @@
 5. 把本文件夹里的所有文件和文件夹都拖进去，包括 `index.html`、`app.js`、`styles.css`、`manifest.webmanifest`、`sw.js`、`icons` 文件夹和 169 题 JSON。
 6. 点 `Commit changes`。
 
+## 开启云同步
+
+1. 打开 Supabase 项目。
+2. 左侧点 `SQL Editor`。
+3. 新建一个查询，把 `supabase-setup.sql` 里面的内容全部复制进去。
+4. 点 `Run`。
+5. 不需要找 `service_role` 或 secret key，页面里已经使用你给的 publishable key。
+6. 回到错题本页面，点“云同步”。
+7. 填公开编号和编辑密码，点“保存并开启同步”。
+8. 以后你新增、编辑、复习错题，会自动同步到云端。
+
+公开编号建议用英文和数字，例如：`cyrus329`。
+编辑密码只给你自己用，不要告诉别人，也不要用银行卡、微信、QQ 等重要密码。
+
+别人查看时，用公开链接：
+
+`https://你的用户名.github.io/wrong-question-organizer/?public=你的公开编号`
+
+别人打开公开链接后只能查看你的错题数量、复习状态和记录内容，不能编辑你的数据。
+
 ## 打开 GitHub Pages
 
 1. 进入仓库的 `Settings`。

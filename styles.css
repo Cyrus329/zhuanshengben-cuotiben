@@ -46,6 +46,12 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+}
+
 .app-shell {
   width: min(1440px, 100%);
   margin: 0 auto;
@@ -217,6 +223,44 @@ textarea:focus {
   height: 18px;
   min-height: 18px;
   accent-color: var(--teal);
+}
+
+.cloud-public-switch {
+  align-self: end;
+  min-height: 44px;
+}
+
+.cloud-status {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--muted);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.cloud-status[data-tone="ok"] {
+  border-color: rgba(61, 122, 74, 0.32);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.cloud-status[data-tone="error"] {
+  border-color: rgba(168, 62, 81, 0.32);
+  background: var(--rose-soft);
+  color: var(--rose);
+}
+
+.cloud-status[data-tone="loading"] {
+  border-color: rgba(49, 90, 159, 0.30);
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.public-view .review-board .panel-heading p::after {
+  content: " · 只读查看";
 }
 
 .subject-strip {

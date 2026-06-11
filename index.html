@@ -24,6 +24,7 @@
       <div class="topbar-actions">
         <button class="icon-button secondary" id="importButton" title="导入备份" aria-label="导入备份">↥</button>
         <button class="icon-button secondary" id="exportButton" title="导出备份" aria-label="导出备份">↧</button>
+        <button class="secondary-button" id="cloudSyncButton" type="button">云同步</button>
         <button class="secondary-button" id="installAppButton" type="button">安装到手机</button>
         <button class="primary-button" id="newRecordButton"><span aria-hidden="true">＋</span> 新错题</button>
       </div>
@@ -245,6 +246,45 @@
         <div>
           <button class="secondary-button" type="button" id="cancelReviewButton">取消</button>
           <button class="primary-button" type="submit">保存复习</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="editor-dialog compact" id="cloudDialog">
+    <form id="cloudForm" method="dialog" class="editor-form">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">Cloud</p>
+          <h2>云同步</h2>
+        </div>
+        <button class="icon-button ghost" type="button" id="closeCloudButton" title="关闭" aria-label="关闭">×</button>
+      </div>
+      <div class="form-grid two">
+        <label>
+          <span>公开编号</span>
+          <input id="cloudSlugInput" maxlength="32" placeholder="例：cyrus329" required>
+        </label>
+        <label>
+          <span>显示名称</span>
+          <input id="cloudNameInput" maxlength="32" placeholder="例：Cyrus 的错题进度">
+        </label>
+        <label>
+          <span>编辑密码</span>
+          <input id="cloudPinInput" type="password" minlength="4" maxlength="64" placeholder="自己记住，别人不要知道" required>
+        </label>
+        <label class="switch cloud-public-switch">
+          <input id="cloudPublicInput" type="checkbox" checked>
+          <span>允许别人通过公开链接查看</span>
+        </label>
+      </div>
+      <p class="cloud-status" id="cloudStatus">第一次使用前，请先在 Supabase 运行 setup 文件。</p>
+      <div class="dialog-actions">
+        <button class="secondary-button" type="button" id="copyPublicLinkButton">复制公开链接</button>
+        <div>
+          <button class="secondary-button" type="button" id="loadCloudButton">从云端加载</button>
+          <button class="secondary-button" type="button" id="cancelCloudButton">取消</button>
+          <button class="primary-button" type="submit">保存并开启同步</button>
         </div>
       </div>
     </form>
