@@ -1,4206 +1,130 @@
-const STORAGE_KEY = "word-memory-trainer:v1";
-const SETTINGS_KEY = "word-memory-trainer:settings:v1";
-const REVIEW_STEPS = [
-  { label: "20分钟", ms: 20 * 60 * 1000 },
-  { label: "1小时", ms: 60 * 60 * 1000 },
-  { label: "9小时", ms: 9 * 60 * 60 * 1000 },
-  { label: "1天", ms: 24 * 60 * 60 * 1000 },
-  { label: "2天", ms: 2 * 24 * 60 * 60 * 1000 },
-  { label: "6天", ms: 6 * 24 * 60 * 60 * 1000 },
-  { label: "31天", ms: 31 * 24 * 60 * 60 * 1000 },
-];
-const PROGRESS_MODES = ["card", "enToZh", "zhToEn", "phrase", "spell", "dictation", "forms"];
-const PROGRESS_MODE_LABELS = {
-  card: "卡片",
-  enToZh: "英译中",
-  zhToEn: "中译英",
-  phrase: "搭配填空",
-  spell: "拼写",
-  dictation: "听写",
-  forms: "变形",
-};
-const MODE_PROGRESS_HINT = "各模式独立进度";
+const STORAGE_KEY = "wrong-question-organizer:v1";
+const CLOUD_CONFIG_KEY = "wrong-question-organizer:cloud-config:v1";
+const SUPABASE_URL = "https://fsizdxkwrxzopkoouipr.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_BfWyJfb6c4GrV0JYLXejUg_QnkuhPvw";
+const URL_PARAMS = new URLSearchParams(window.location.search);
+const PUBLIC_VIEWER_SLUG = normalizeCloudSlug(URL_PARAMS.get("public") || URL_PARAMS.get("view") || "");
+const SUBJECTS = ["高数", "计算机", "英语"];
+const SUBJECT_ALIASES = new Map([
+  ["数学", "高数"],
+  ["高等数学", "高数"],
+  ["大学数学", "高数"],
+  ["计算机基础", "计算机"],
+  ["英语二", "英语"],
+]);
 
-const BUILTIN_PACKAGE_KEY = "word-memory-trainer:word-list-1-2-3-4-5:v5";
-const BUILTIN_WORDS = [
-  {
-    "id": "word-list-1-001",
-    "term": "shop",
-    "meaning": "n. 商店；店铺；v. 去商店买；在商店购物",
-    "phrase": "go shopping 购物",
-    "note": "/ʃɑ:p/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-002",
-    "term": "go shopping",
-    "meaning": "购物",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-003",
-    "term": "store",
-    "meaning": "n. 商店；店铺；备用物；仓库；v. 保存；记忆",
-    "phrase": "convenience store 便利店",
-    "note": "/stɔ:r/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-004",
-    "term": "convenience store",
-    "meaning": "便利店",
-    "phrase": "",
-    "note": "拓展短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-005",
-    "term": "restore",
-    "meaning": "v. 恢复；修复；使复原",
-    "phrase": "",
-    "note": "/rɪˈstɔ:r/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-006",
-    "term": "clerk",
-    "meaning": "n. 职员；档案管理员",
-    "phrase": "",
-    "note": "/klɜ:rk/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-007",
-    "term": "business",
-    "meaning": "n. 商业；买卖；生意",
-    "phrase": "on business 出差；none of your business 不关你的事；E-business 电子商务",
-    "note": "/ˈbɪznəs/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-008",
-    "term": "on business",
-    "meaning": "出差",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-009",
-    "term": "none of your business",
-    "meaning": "不关你的事",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-010",
-    "term": "E-business",
-    "meaning": "电子商务",
-    "phrase": "",
-    "note": "拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-011",
-    "term": "stock",
-    "meaning": "n. 库存；存货；资本；种类；v. 备有；存有；摆满；供应；adj. 存货的",
-    "phrase": "in stock 有现货；out of stock 缺货",
-    "note": "/stɑ:k/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-012",
-    "term": "in stock",
-    "meaning": "有现货",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-013",
-    "term": "out of stock",
-    "meaning": "缺货",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-014",
-    "term": "price",
-    "meaning": "n. 价格；物价；代价；v. 给……定价",
-    "phrase": "at any price 不惜任何代价；无论如何；price list 价目表；original price 原价；at a high/low/reasonable price 以很高、很低、合理的价格",
-    "note": "/praɪs/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-015",
-    "term": "at any price",
-    "meaning": "不惜任何代价；无论如何",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-016",
-    "term": "price list",
-    "meaning": "价目表",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-017",
-    "term": "priceless",
-    "meaning": "adj. 无价的；非常珍贵的",
-    "phrase": "",
-    "note": "/ˈpraɪsləs/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-018",
-    "term": "discount",
-    "meaning": "n. 折扣；v. 打折扣",
-    "phrase": "",
-    "note": "/ˈdɪskaʊnt/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-019",
-    "term": "dollar",
-    "meaning": "n. 美元",
-    "phrase": "",
-    "note": "/ˈdɑ:lər/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-020",
-    "term": "credit",
-    "meaning": "n. 信用；信贷；学分；赞扬；可信性",
-    "phrase": "credit card 信用卡；to one's credit 值得赞扬的是……",
-    "note": "/ˈkredɪt/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-021",
-    "term": "credit card",
-    "meaning": "信用卡",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-022",
-    "term": "to one's credit",
-    "meaning": "值得赞扬的是……",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-023",
-    "term": "cash",
-    "meaning": "n. 钱；现金；v. 将……兑换成现金；支付现款",
-    "phrase": "in cash 用现金",
-    "note": "/kæʃ/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-024",
-    "term": "in cash",
-    "meaning": "用现金",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-025",
-    "term": "cheque",
-    "meaning": "n. 支票",
-    "phrase": "",
-    "note": "/tʃek/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-026",
-    "term": "online",
-    "meaning": "adj. 在线的；联网的；联机的；adv. 在网上地；在线地",
-    "phrase": "online shopping 线上购物；online paying 线上支付",
-    "note": "/ˌɑ:nˈlaɪn/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-027",
-    "term": "online shopping",
-    "meaning": "线上购物",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-028",
-    "term": "online paying",
-    "meaning": "线上支付",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-029",
-    "term": "offline",
-    "meaning": "adj. （计算机）未联网的；不在线的",
-    "phrase": "",
-    "note": "/ˌɔfˈlaɪn/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-030",
-    "term": "buy",
-    "meaning": "v. 买；购买",
-    "phrase": "",
-    "note": "/baɪ/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-031",
-    "term": "sell",
-    "meaning": "v. 卖；出售",
-    "phrase": "for sale 售卖中；待售；on sale 供出售；上市；特价销售；sell well 卖得好",
-    "note": "/sel/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-032",
-    "term": "sale",
-    "meaning": "n. 卖；出售",
-    "phrase": "",
-    "note": "/seɪl/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-033",
-    "term": "for sale",
-    "meaning": "售卖中；待售",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-034",
-    "term": "on sale",
-    "meaning": "供出售；上市；特价销售",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-035",
-    "term": "salesman",
-    "meaning": "n. 售货员；营业员",
-    "phrase": "",
-    "note": "/ˈseɪlzmən/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-036",
-    "term": "consume",
-    "meaning": "v. 消费；用完；耗尽",
-    "phrase": "",
-    "note": "/kənˈsu:m/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-037",
-    "term": "consumer",
-    "meaning": "n. 消费者；用户；顾客",
-    "phrase": "",
-    "note": "/kənˈsu:mər/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-038",
-    "term": "consumption",
-    "meaning": "n. 耗尽；消耗",
-    "phrase": "",
-    "note": "/kənˈsʌmpʃn/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-039",
-    "term": "purchase",
-    "meaning": "v. 购买；采购；n. 购买；采购",
-    "phrase": "",
-    "note": "/ˈpɜ:rtʃəs/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-040",
-    "term": "tradition",
-    "meaning": "n. 传统；传统风俗",
-    "phrase": "",
-    "note": "/trəˈdɪʃn/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-041",
-    "term": "traditional",
-    "meaning": "adj. 传统的",
-    "phrase": "",
-    "note": "/trəˈdɪʃənl/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-042",
-    "term": "custom",
-    "meaning": "n. 风俗；习俗；光顾；习惯",
-    "phrase": "",
-    "note": "/ˈkʌstəm/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-043",
-    "term": "customer",
-    "meaning": "n. 顾客；客户",
-    "phrase": "",
-    "note": "/ˈkʌstəmər/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-044",
-    "term": "costume",
-    "meaning": "n. 服饰；装束",
-    "phrase": "",
-    "note": "/ˈkɑstju:m/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-045",
-    "term": "bargain",
-    "meaning": "n. 协定；协议；便宜的东西；v. 讨价还价；谈判",
-    "phrase": "",
-    "note": "/ˈbɑ:rgən/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-046",
-    "term": "cheap",
-    "meaning": "adj. 便宜的；无价值的；adv. 便宜地",
-    "phrase": "The hat is cheap. 帽子很便宜。",
-    "note": "/tʃi:p/；cheap 不用于修饰 price；修饰价格要用 high/low/reasonable",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-047",
-    "term": "expend",
-    "meaning": "v. 支出；花费",
-    "phrase": "",
-    "note": "/ɪkˈspend/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-048",
-    "term": "expense",
-    "meaning": "n. 代价；价钱；费用；v. 把……记入费用账户",
-    "phrase": "at the expense of 以……为代价",
-    "note": "/ɪkˈspens/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-049",
-    "term": "at the expense of",
-    "meaning": "以……为代价",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-050",
-    "term": "expensive",
-    "meaning": "adj. 花钱多的；昂贵的",
-    "phrase": "",
-    "note": "/ɪkˈspensɪv/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-051",
-    "term": "expenditure",
-    "meaning": "n. 支出；消费；花费",
-    "phrase": "",
-    "note": "/ɪkˈspendɪtʃər/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-052",
-    "term": "dispensable",
-    "meaning": "adj. 不必要的",
-    "phrase": "",
-    "note": "/dɪˈspensəbl/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-053",
-    "term": "indispensable",
-    "meaning": "adj. 必不可少的；不可或缺的；必需的",
-    "phrase": "",
-    "note": "/ˌɪndɪˈspensəbl/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-054",
-    "term": "spend",
-    "meaning": "v. 花费；度过",
-    "phrase": "spend time/money on something；spend time/money in doing something",
-    "note": "/spend/；in 可以省略",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-055",
-    "term": "spend on",
-    "meaning": "在某事上花费时间/金钱",
-    "phrase": "",
-    "note": "用法：spend time/money on something",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-056",
-    "term": "spend...in doing",
-    "meaning": "花费时间/金钱做某事",
-    "phrase": "",
-    "note": "用法：spend time/money in doing something",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-057",
-    "term": "cost",
-    "meaning": "v. 成本为；价格为；使付出……的代价；n. 价格；成本；代价",
-    "phrase": "at all costs 无论如何；at the cost of 以……为代价",
-    "note": "/kɔ:st/；cost 作动词时常用主动形式表被动意义，主语通常是事物",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-058",
-    "term": "at all costs",
-    "meaning": "无论如何",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-059",
-    "term": "at the cost of",
-    "meaning": "以……为代价",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-060",
-    "term": "costly",
-    "meaning": "adj. 贵重的；昂贵的",
-    "phrase": "",
-    "note": "/ˈkɔ:stli/；拓展词",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-061",
-    "term": "take",
-    "meaning": "v. 携带；拿走；带去；花费；占用（时间）",
-    "phrase": "It takes/took + 时间 + to do sth.",
-    "note": "/teɪk/",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-1-062",
-    "term": "It takes/took + time + to do sth.",
-    "meaning": "做某事花费多少时间",
-    "phrase": "",
-    "note": "it 作形式主语，真正的主语为后面的 to do",
-    "tag": "Word List 1 / 购物商务",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-07T18:01:16",
-    "updatedAt": "2026-06-07T18:01:16",
-    "history": []
-  },
-  {
-    "id": "word-list-2-001",
-    "term": "know",
-    "meaning": "v. 知道；了解；认识到",
-    "phrase": "as far as I know 就我所知",
-    "note": "/nou/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-002",
-    "term": "as far as I know",
-    "meaning": "就我所知",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-003",
-    "term": "unknown",
-    "meaning": "adj. 不知道的；不熟悉的",
-    "phrase": "",
-    "note": "/ˌʌnˈnoʊn/；拓展词",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-004",
-    "term": "see",
-    "meaning": "v. 看见；弄清；了解",
-    "phrase": "see sb. off 为某人送别",
-    "note": "/si:/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-005",
-    "term": "see sb. off",
-    "meaning": "为某人送别",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-006",
-    "term": "feel",
-    "meaning": "v. 感觉；体会到；摸起来；以为；n. 触觉；手感；触摸；印象",
-    "phrase": "feel at home 舒适自在；feel free to do sth. （请）随便做某事",
-    "note": "/fi:l/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-007",
-    "term": "feel at home",
-    "meaning": "舒适自在",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-008",
-    "term": "feel free to do sth.",
-    "meaning": "（请）随便做某事",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-009",
-    "term": "feeling",
-    "meaning": "n. 感觉；看法；想法",
-    "phrase": "",
-    "note": "/'fi:liŋ/；拓展词",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-010",
-    "term": "smell",
-    "meaning": "n. 气味；嗅觉；臭味；v. 有（或发出）……气味；闻到",
-    "phrase": "",
-    "note": "/smel/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-011",
-    "term": "taste",
-    "meaning": "n. 味道；滋味；口味；v. 品尝……的味道；体验；尝起来",
-    "phrase": "",
-    "note": "/teɪst/；taste 作系动词表示“有……味道”，不用进行时或被动语态，后面接表语。误：The meat is tasted/tasting well. 正：The meat tastes good.",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-012",
-    "term": "sound",
-    "meaning": "n. 声音；意味；无线电广播；v. 发出声音；探测；adj. 没有受伤的；健康的",
-    "phrase": "",
-    "note": "/saʊnd/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-013",
-    "term": "listen",
-    "meaning": "v. 听；收听；听从；n. 听；倾听",
-    "phrase": "listen to 倾听；聆听",
-    "note": "/'lisn/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-014",
-    "term": "listen to",
-    "meaning": "倾听；聆听",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-015",
-    "term": "hear",
-    "meaning": "v. 听见；听到",
-    "phrase": "",
-    "note": "/hɪr/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-016",
-    "term": "voice",
-    "meaning": "n. 说话声；嗓音",
-    "phrase": "",
-    "note": "/vɔɪs/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-017",
-    "term": "speak",
-    "meaning": "v. 谈话；交谈；说；讲述；（会）讲（某种语言）；发言，演讲",
-    "phrase": "",
-    "note": "/spi:k/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-018",
-    "term": "aloud",
-    "meaning": "adv. 出声地；能听见地；大声地",
-    "phrase": "",
-    "note": "/ə'laʊd/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-019",
-    "term": "loudly",
-    "meaning": "adv. 大声地；响亮地",
-    "phrase": "",
-    "note": "/'laʊdli/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-020",
-    "term": "speech",
-    "meaning": "n. 说话；言语；演说",
-    "phrase": "",
-    "note": "/spi:tʃ/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-021",
-    "term": "lecture",
-    "meaning": "n. 讲座；讲课；v. 讲课；做讲座",
-    "phrase": "give a lecture 讲课；演讲",
-    "note": "/'lektʃər/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-022",
-    "term": "give a lecture",
-    "meaning": "讲课；演讲",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-023",
-    "term": "talk",
-    "meaning": "v. 说话；交谈；谈话；谈判，商讨；n. 交谈；讨论",
-    "phrase": "",
-    "note": "/tɔ:k/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-024",
-    "term": "tell",
-    "meaning": "v. 告诉；识别；说明",
-    "phrase": "tell apart 区分；区别",
-    "note": "/tel/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-025",
-    "term": "tell apart",
-    "meaning": "区分；区别",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-026",
-    "term": "retell",
-    "meaning": "v. 再讲；复述",
-    "phrase": "",
-    "note": "/ˌri:'tel/；拓展词",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-027",
-    "term": "story",
-    "meaning": "n. 故事；传说；叙述",
-    "phrase": "tell a story 讲故事；tell stories 讲故事",
-    "note": "/'stɔ:ri/；“讲故事”用 tell a story 或 tell stories，不能用 speak.",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-028",
-    "term": "tell a story",
-    "meaning": "讲故事",
-    "phrase": "tell stories 讲故事",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-029",
-    "term": "read",
-    "meaning": "v. 阅读；读懂；朗读；（在书籍、报纸等中）读到，看到；解读；看透（想法或心思）",
-    "phrase": "",
-    "note": "/ri:d/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-030",
-    "term": "reader",
-    "meaning": "n. 读者；爱读书的人",
-    "phrase": "",
-    "note": "/'ri:də(r)/；拓展词",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-031",
-    "term": "say",
-    "meaning": "v. 说，讲；宣称，说明；认为，据说；n. 发言权，决定权",
-    "phrase": "",
-    "note": "/seɪ/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-032",
-    "term": "article",
-    "meaning": "n. 一件；物件；文章",
-    "phrase": "",
-    "note": "/'ɑ:rtɪkl/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-033",
-    "term": "text",
-    "meaning": "n. 文本；文章；正文；v. 给（某人）发短信",
-    "phrase": "",
-    "note": "/tekst/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-034",
-    "term": "context",
-    "meaning": "n. 上下文；语境",
-    "phrase": "",
-    "note": "/'kɒntekst/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-035",
-    "term": "passage",
-    "meaning": "n. 通道；走廊；章节；段落",
-    "phrase": "",
-    "note": "/'pæsɪdʒ/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-036",
-    "term": "chapter",
-    "meaning": "n. 章；回",
-    "phrase": "",
-    "note": "/'tʃæptər/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-037",
-    "term": "paragraph",
-    "meaning": "n. 段落；节；v. 把……分段",
-    "phrase": "",
-    "note": "/'pærəgræf/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-038",
-    "term": "news",
-    "meaning": "n. 新闻；消息",
-    "phrase": "",
-    "note": "/nu:z/；news 是不可数名词，表示“一则新闻；一则消息”要用 a piece of news.",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-039",
-    "term": "a piece of news",
-    "meaning": "一则新闻；一则消息",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-040",
-    "term": "newspaper",
-    "meaning": "n. 报纸",
-    "phrase": "",
-    "note": "/'nu:zpeɪpə(r)/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-041",
-    "term": "message",
-    "meaning": "n. 口信；消息；信息",
-    "phrase": "leave a message 留话；留个信息；text message 文本消息；发短信",
-    "note": "/'mesɪdʒ/",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-042",
-    "term": "leave a message",
-    "meaning": "留话；留个信息",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-2-043",
-    "term": "text message",
-    "meaning": "文本消息；发短信",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 2 / 感官与语言交流",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-08T10:44:42",
-    "updatedAt": "2026-06-08T10:44:42",
-    "history": []
-  },
-  {
-    "id": "word-list-3-001",
-    "term": "ball",
-    "meaning": "n. 球；球类运动；舞会",
-    "phrase": "",
-    "note": "/bɔ:l/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-002",
-    "term": "skate",
-    "meaning": "n. 冰鞋；v. 滑冰；溜冰",
-    "phrase": "",
-    "note": "/skeɪt/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-003",
-    "term": "skill",
-    "meaning": "n. 技巧；技艺；v. 培训（工人）",
-    "phrase": "special skill 特殊技能，特长；social skill 社交技能；professional skill 专业技能",
-    "note": "/skil/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-004",
-    "term": "special skill",
-    "meaning": "特殊技能；特长",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-005",
-    "term": "social skill",
-    "meaning": "社交技能",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-006",
-    "term": "professional skill",
-    "meaning": "专业技能",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-007",
-    "term": "able",
-    "meaning": "adj. 能够的",
-    "phrase": "be able to do sth. 能够",
-    "note": "/'eɪbl/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-008",
-    "term": "be able to do sth.",
-    "meaning": "能够",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-009",
-    "term": "ability",
-    "meaning": "n. 能力；才能；本领",
-    "phrase": "",
-    "note": "/ə'biləti/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-010",
-    "term": "disable",
-    "meaning": "v. 使丧失能力；使伤残",
-    "phrase": "",
-    "note": "/dis'eɪbl/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-011",
-    "term": "unable",
-    "meaning": "adj. 不能胜任的",
-    "phrase": "",
-    "note": "/ʌn'eɪbl/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-012",
-    "term": "enjoy",
-    "meaning": "v. 享受；欣赏；喜爱",
-    "phrase": "enjoy doing sth. 喜欢做某事",
-    "note": "/ɪn'dʒɔɪ/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-013",
-    "term": "enjoy doing sth.",
-    "meaning": "喜欢做某事",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-014",
-    "term": "enjoyable",
-    "meaning": "adj. 令人愉快的",
-    "phrase": "",
-    "note": "/ɪn'dʒɔɪəbl/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-015",
-    "term": "grass",
-    "meaning": "n. 草；草地；草坪；v. （向警方）告密；告发",
-    "phrase": "",
-    "note": "/grɑ:s/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-016",
-    "term": "afraid",
-    "meaning": "adj. 害怕的；焦虑的",
-    "phrase": "be afraid of 害怕；恐惧",
-    "note": "/ə'freɪd/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-017",
-    "term": "be afraid of",
-    "meaning": "害怕；恐惧",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-018",
-    "term": "water",
-    "meaning": "n. 水；水域；v. 给……浇水；灌溉",
-    "phrase": "",
-    "note": "/'wɔ:tər/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-019",
-    "term": "old",
-    "meaning": "adj. 古老的；老的；n. 老年人；旧事物",
-    "phrase": "",
-    "note": "/oʊld/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-020",
-    "term": "elder",
-    "meaning": "adj. 年龄较大的；较老的",
-    "phrase": "",
-    "note": "/'eldər/；elder 是 old 的比较级。指家庭成员中年龄较长的，或指两人中年龄较长的。older 也是 old 的比较级，指年龄较大、较老，指物时意为“较旧的”。",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-021",
-    "term": "young",
-    "meaning": "adj. 幼小的；年轻的；n. 年轻人；青年人；幼崽；幼兽",
-    "phrase": "",
-    "note": "/jʌŋ/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-022",
-    "term": "youth",
-    "meaning": "n. 青（少）年时代；青春时期",
-    "phrase": "",
-    "note": "/ju:θ/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-023",
-    "term": "youngster",
-    "meaning": "n. 青少年；年轻人",
-    "phrase": "",
-    "note": "/'jʌŋstə/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-024",
-    "term": "junior",
-    "meaning": "adj. 年少的；地位低的；初级的；n. 年少者；晚辈",
-    "phrase": "",
-    "note": "/'dʒu:niər/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-025",
-    "term": "senior",
-    "meaning": "adj. 较年长的；高级的；高职的",
-    "phrase": "",
-    "note": "/'si:niər/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-026",
-    "term": "live",
-    "meaning": "v. 居住；活着；生存；adj. 活的；现场直播的；adv. 现场直播地",
-    "phrase": "live up to 遵守（诺言）；不辜负（期望）；live on 以……为食",
-    "note": "/lɪv, laɪv/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-027",
-    "term": "live up to",
-    "meaning": "遵守（诺言）；不辜负（期望）",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-028",
-    "term": "live on",
-    "meaning": "以……为食",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-029",
-    "term": "lively",
-    "meaning": "adj. 充满活力的；活泼外向的；敏锐的",
-    "phrase": "",
-    "note": "/'laɪvli/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-030",
-    "term": "livelihood",
-    "meaning": "n. 生计；营生",
-    "phrase": "",
-    "note": "/'laɪvlihʊd/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-031",
-    "term": "alive",
-    "meaning": "adj. （人；动植物）活的",
-    "phrase": "",
-    "note": "/ə'laɪv/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-032",
-    "term": "lovely",
-    "meaning": "adj. 可爱的；令人愉快的；美好的",
-    "phrase": "",
-    "note": "/'lʌvli/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-033",
-    "term": "life",
-    "meaning": "n. 生活；生命；人命",
-    "phrase": "wildlife 野生动植物；lifestyle 生活方式",
-    "note": "/laɪf/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-034",
-    "term": "wildlife",
-    "meaning": "n. 野生动植物；adj. 野生动植物的",
-    "phrase": "",
-    "note": "/'waɪldlaɪf/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-035",
-    "term": "lifestyle",
-    "meaning": "n. 生活方式",
-    "phrase": "",
-    "note": "/'laɪfstaɪl/；拓展词",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-036",
-    "term": "style",
-    "meaning": "n. 风格；样式",
-    "phrase": "",
-    "note": "/staɪl/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-037",
-    "term": "animal",
-    "meaning": "n. 动物；牲畜；adj. 动物的",
-    "phrase": "",
-    "note": "/'ænɪml/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-038",
-    "term": "mammal",
-    "meaning": "n. 哺乳动物",
-    "phrase": "",
-    "note": "/'mæm(ə)l/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-039",
-    "term": "insect",
-    "meaning": "n. 昆虫",
-    "phrase": "",
-    "note": "/'ɪnsekt/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-040",
-    "term": "pet",
-    "meaning": "n. 宠物；玩赏动物",
-    "phrase": "",
-    "note": "/pet/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-041",
-    "term": "bite",
-    "meaning": "v. 咬；啃；咬住；n. 咬；啃；浓烈的气味",
-    "phrase": "",
-    "note": "/baɪt/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-042",
-    "term": "diary",
-    "meaning": "n. 日记；日志",
-    "phrase": "keep a diary 记日记",
-    "note": "/'daɪəri/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-043",
-    "term": "keep a diary",
-    "meaning": "记日记",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-044",
-    "term": "dairy",
-    "meaning": "n. 乳品公司",
-    "phrase": "",
-    "note": "/'deəri/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-045",
-    "term": "borrow",
-    "meaning": "v. 借；借入；借用",
-    "phrase": "",
-    "note": "/'bɒrəʊ/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-046",
-    "term": "lend",
-    "meaning": "v. 把……借给；借出",
-    "phrase": "lend sth. to sb. 借给某人某物 = lend sb. sth.",
-    "note": "/lend/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-047",
-    "term": "lend sth. to sb.",
-    "meaning": "借给某人某物 = lend sb. sth.",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-048",
-    "term": "vegetable",
-    "meaning": "n. 蔬菜；植物人；adj. 蔬菜的；植物的",
-    "phrase": "",
-    "note": "/'vedʒtəbl/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-049",
-    "term": "sweep",
-    "meaning": "v./n. 打扫；扫",
-    "phrase": "",
-    "note": "/swi:p/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-050",
-    "term": "mainly",
-    "meaning": "adv. 主要地；首要地；大部分",
-    "phrase": "",
-    "note": "/'meɪnli/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-051",
-    "term": "topic",
-    "meaning": "n. 题目；话题；主题",
-    "phrase": "",
-    "note": "/'tɑ:pɪk/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-052",
-    "term": "title",
-    "meaning": "n. 标题；题目；职称；职务；v. 给……加标题",
-    "phrase": "",
-    "note": "/'taɪtl/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-053",
-    "term": "entitle",
-    "meaning": "v. 命名；使有权力；使有资格",
-    "phrase": "",
-    "note": "/ɪnˈtaɪtl/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-3-054",
-    "term": "underline",
-    "meaning": "v. 在（词语等下）画线；强调；突出；n. 下划线",
-    "phrase": "",
-    "note": "/ˌʌndər'laɪn/",
-    "tag": "Word List 3 / 能力生活与自然",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-09T14:56:23",
-    "updatedAt": "2026-06-09T14:56:23",
-    "history": []
-  },
-  {
-    "id": "word-list-4-001",
-    "term": "stop",
-    "meaning": "v. 结束；停止；n. 停止；终止；车站",
-    "phrase": "",
-    "note": "/sta:p/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-002",
-    "term": "cancel",
-    "meaning": "v. 取消；中止",
-    "phrase": "call off 取消",
-    "note": "/'kænsl/；近义词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-003",
-    "term": "call off",
-    "meaning": "取消",
-    "phrase": "",
-    "note": "近义短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-004",
-    "term": "cancellation",
-    "meaning": "n. 取消；撤销",
-    "phrase": "",
-    "note": "/,kænsə'leiʃn/；拓展词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-005",
-    "term": "cancer",
-    "meaning": "n. 癌症",
-    "phrase": "",
-    "note": "/'kænsər/；例句：It has been said that stress causes cancer. 据说压力会诱发癌症。",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-006",
-    "term": "start",
-    "meaning": "v. 开始；启动；n. 开头；开端",
-    "phrase": "",
-    "note": "/sta:rt/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-007",
-    "term": "star",
-    "meaning": "n. 星；恒星；明星；v. 使担任主角；使成为明星",
-    "phrase": "",
-    "note": "/sta:r/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-008",
-    "term": "begin",
-    "meaning": "v. 开始；启动",
-    "phrase": "to begin with 刚开始；首先；in the beginning 首先",
-    "note": "/bi'gin/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-009",
-    "term": "to begin with",
-    "meaning": "刚开始；首先",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-010",
-    "term": "in the beginning",
-    "meaning": "首先",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-011",
-    "term": "beginning",
-    "meaning": "n. 开始；开端",
-    "phrase": "",
-    "note": "/bi'giniŋ/；拓展词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-012",
-    "term": "beginner",
-    "meaning": "n. 初学者",
-    "phrase": "",
-    "note": "拓展词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-013",
-    "term": "renew",
-    "meaning": "v. 重新开始；继续进行；更新；恢复",
-    "phrase": "",
-    "note": "/ri'nu:/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-014",
-    "term": "outset",
-    "meaning": "n. 起始；开始",
-    "phrase": "",
-    "note": "/'aut,set/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-015",
-    "term": "end",
-    "meaning": "n. 最后部分；末尾；v. 结束；终止",
-    "phrase": "in the end 最后；终于；at the end of 在……结束的时候",
-    "note": "/end/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-016",
-    "term": "in the end",
-    "meaning": "最后；终于",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-017",
-    "term": "at the end of",
-    "meaning": "在……结束的时候",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-018",
-    "term": "endless",
-    "meaning": "adj. 无止境的；永久的",
-    "phrase": "",
-    "note": "/'endles/；拓展词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-019",
-    "term": "ending",
-    "meaning": "n. 结局；结尾",
-    "phrase": "",
-    "note": "/'endiŋ/；拓展词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-020",
-    "term": "cease",
-    "meaning": "v. 停止；终止",
-    "phrase": "",
-    "note": "/si:s/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-021",
-    "term": "over",
-    "meaning": "adv. 结束；prep. 在……上面；悬在……上面",
-    "phrase": "over again 再；重新；all over 到处",
-    "note": "/'ouvər/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-022",
-    "term": "over again",
-    "meaning": "再；重新",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-023",
-    "term": "all over",
-    "meaning": "到处",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-024",
-    "term": "under",
-    "meaning": "adv. 在下面；少于；prep. 在……表面下；由……覆盖；adj. 下面的",
-    "phrase": "",
-    "note": "/'ʌndər/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-025",
-    "term": "above",
-    "meaning": "prep. 在……上方；高于；adv. 在上面；更高",
-    "phrase": "above all 最重要的是；首先",
-    "note": "/ə'bʌv/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-026",
-    "term": "above all",
-    "meaning": "最重要的是；首先",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-027",
-    "term": "pause",
-    "meaning": "n./v. 暂停；中止；停顿",
-    "phrase": "",
-    "note": "/pɔ:z/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-028",
-    "term": "halt",
-    "meaning": "n. 停止；暂停；v. 停止；终止；踌躇",
-    "phrase": "",
-    "note": "/hɔ:lt/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-029",
-    "term": "ago",
-    "meaning": "adv. 以前",
-    "phrase": "",
-    "note": "/ə'gou/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-030",
-    "term": "before",
-    "meaning": "prep. 之前；在……以前；conj. 在……以前；到……为止；adv. 以前；过去",
-    "phrase": "",
-    "note": "/bi'fɔ:r/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-031",
-    "term": "after",
-    "meaning": "prep. 在……之后；紧接着；在……身后；conj. 在……以后；adv. 后来；以后",
-    "phrase": "",
-    "note": "/'a:ftə(r)/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-032",
-    "term": "now",
-    "meaning": "adv. 现在；目前；conj. 既然；由于；adj. 现在的；现任的",
-    "phrase": "right now 立刻；马上；just now 刚才；now that 既然；from now on 从现在开始",
-    "note": "/nau/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-033",
-    "term": "right now",
-    "meaning": "立刻；马上",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-034",
-    "term": "just now",
-    "meaning": "刚才",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-035",
-    "term": "now that",
-    "meaning": "既然",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-036",
-    "term": "from now on",
-    "meaning": "从现在开始",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-037",
-    "term": "nowadays",
-    "meaning": "adv. 如今；现今",
-    "phrase": "",
-    "note": "/'nauədeiz/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-038",
-    "term": "future",
-    "meaning": "n. 将来；未来；adj. 将来的；未来的",
-    "phrase": "in the future 在未来",
-    "note": "/'fju:tʃər/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-039",
-    "term": "in the future",
-    "meaning": "在未来",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-040",
-    "term": "recent",
-    "meaning": "adj. 最近的；新近的；近来",
-    "phrase": "",
-    "note": "/'ri:snt/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-041",
-    "term": "recently",
-    "meaning": "adv. 最近；新近；近来",
-    "phrase": "",
-    "note": "/'ri:sntli/；拓展词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-042",
-    "term": "current",
-    "meaning": "adj. 当前的；现时的；流行的；通用的",
-    "phrase": "currently 当前；目前；currency 通货；货币；通用",
-    "note": "/'kʌrənt/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-043",
-    "term": "currently",
-    "meaning": "adv. 当前；目前",
-    "phrase": "",
-    "note": "/'kʌrəntli/；拓展词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-044",
-    "term": "currency",
-    "meaning": "n. 通货；货币；通用",
-    "phrase": "",
-    "note": "/'kʌrənsi/；拓展词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-045",
-    "term": "then",
-    "meaning": "adv. 然后；当时；那时；其后",
-    "phrase": "by then 到那时；from then on 从那时起；now and then 有时；时常",
-    "note": "/ðen/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-046",
-    "term": "by then",
-    "meaning": "到那时",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-047",
-    "term": "from then on",
-    "meaning": "从那时起",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-048",
-    "term": "now and then",
-    "meaning": "有时；时常",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-049",
-    "term": "only",
-    "meaning": "adv. 只有；仅；adj. 唯一的；仅有的",
-    "phrase": "only to do sth. 结果却（表意料之外的结果）",
-    "note": "/ounli/；当“only+状语”位于句首时，其后习惯上要用部分倒装。例句：Only in this way can we learn English well. 只有这样才能学好英语。",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-050",
-    "term": "only to do sth.",
-    "meaning": "结果却（表意料之外的结果）",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-051",
-    "term": "mere",
-    "meaning": "adj. 只不过；仅仅；n. 湖；池塘",
-    "phrase": "",
-    "note": "/mir/",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-4-052",
-    "term": "merely",
-    "meaning": "adv. 仅仅；只",
-    "phrase": "",
-    "note": "/'miəli/；拓展词",
-    "tag": "Word List 4 / 时间进程与方位",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-001",
-    "term": "quarter",
-    "meaning": "n. 四分之一",
-    "phrase": "a quarter 一个季度；一刻钟；四分之一",
-    "note": "/'kwɔ:rtər/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-002",
-    "term": "a quarter",
-    "meaning": "一个季度；一刻钟；四分之一",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-003",
-    "term": "half",
-    "meaning": "n. 半；一半；半场",
-    "phrase": "",
-    "note": "/hæf/；在表示“时间钟点”时，多用 half 表示“三十分钟”，如：“七点半”可翻译为 half past seven 或 seven thirty。注意没有 seven half 的说法。",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-004",
-    "term": "internet",
-    "meaning": "n. 互联网；因特网",
-    "phrase": "",
-    "note": "/'intərnet/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-005",
-    "term": "website",
-    "meaning": "n. 网站",
-    "phrase": "",
-    "note": "/'websait/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-006",
-    "term": "surf",
-    "meaning": "v. 上网；冲浪",
-    "phrase": "surf the internet 上网",
-    "note": "/sɜ:f/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-007",
-    "term": "surf the internet",
-    "meaning": "上网",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-008",
-    "term": "net",
-    "meaning": "n. 网；罗网；网子",
-    "phrase": "network 人际网；网络",
-    "note": "/net/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-009",
-    "term": "network",
-    "meaning": "n. 人际网；网络",
-    "phrase": "",
-    "note": "/'netwɜ:rk/；拓展词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-010",
-    "term": "site",
-    "meaning": "n. 地基；选址；v. 给……择址",
-    "phrase": "construction site 建筑工地",
-    "note": "/sait/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-011",
-    "term": "construction site",
-    "meaning": "建筑工地",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-012",
-    "term": "cite",
-    "meaning": "v. 引用；引证",
-    "phrase": "",
-    "note": "/sait/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-013",
-    "term": "way",
-    "meaning": "n. 方法；路；道；方面；情况",
-    "phrase": "all the way 一路上；自始至终；by the way 顺便提一下；get in the way of 挡……的路；妨碍",
-    "note": "/wei/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-014",
-    "term": "all the way",
-    "meaning": "一路上；自始至终",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-015",
-    "term": "by the way",
-    "meaning": "顺便提一下",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-016",
-    "term": "get in the way of",
-    "meaning": "挡……的路；妨碍",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-017",
-    "term": "method",
-    "meaning": "n. 方法；办法",
-    "phrase": "",
-    "note": "/'meθəd/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-018",
-    "term": "means",
-    "meaning": "n. 方法；手段",
-    "phrase": "by means of 依靠；通过；by no means 绝不",
-    "note": "/mi:nz/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-019",
-    "term": "by means of",
-    "meaning": "依靠；通过",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-020",
-    "term": "by no means",
-    "meaning": "绝不",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-021",
-    "term": "avenue",
-    "meaning": "n. 途径；大道；林荫道",
-    "phrase": "",
-    "note": "/'ævənju:/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-022",
-    "term": "mode",
-    "meaning": "n. 方法；做法；方式；模式",
-    "phrase": "",
-    "note": "/moud/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-023",
-    "term": "via",
-    "meaning": "prep. 经由；经过",
-    "phrase": "",
-    "note": "/vaiə/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-024",
-    "term": "strategy",
-    "meaning": "n. 战略",
-    "phrase": "",
-    "note": "/'strætədʒi/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-025",
-    "term": "solve",
-    "meaning": "v. 解决；处理；解释；解答",
-    "phrase": "settle 解决，结束（争端等）；tackle 应付，解决；handle 处理，应付，管理；deal with / do with / cope with 处理",
-    "note": "/sɑ:lv/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-026",
-    "term": "settle",
-    "meaning": "v. 解决；结束（争端等）",
-    "phrase": "",
-    "note": "/'set(ə)l；近义词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-027",
-    "term": "tackle",
-    "meaning": "v. 应付；解决",
-    "phrase": "",
-    "note": "/'tæk(ə)l/；近义词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-028",
-    "term": "handle",
-    "meaning": "v. 处理；应付；管理；n. 把手；拉手",
-    "phrase": "",
-    "note": "/'hænd(ə)l/；近义词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-029",
-    "term": "deal with",
-    "meaning": "处理",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-030",
-    "term": "do with",
-    "meaning": "处理",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-031",
-    "term": "cope with",
-    "meaning": "处理",
-    "phrase": "",
-    "note": "短语",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-032",
-    "term": "solution",
-    "meaning": "n. 解决方法；解决方案",
-    "phrase": "",
-    "note": "/sə'lu:ʃn/；拓展词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-033",
-    "term": "brain",
-    "meaning": "n. 脑；智力；智慧",
-    "phrase": "",
-    "note": "/brein/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-034",
-    "term": "wise",
-    "meaning": "adj. 有智慧的；睿智的",
-    "phrase": "wisdom 智慧；明智",
-    "note": "/waiz/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-035",
-    "term": "wisdom",
-    "meaning": "n. 智慧；明智",
-    "phrase": "",
-    "note": "/'wizdəm/；拓展词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-036",
-    "term": "clever",
-    "meaning": "adj. 聪明的；伶俐的",
-    "phrase": "",
-    "note": "/'klevər/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-037",
-    "term": "smart",
-    "meaning": "adj. 聪明的；整洁的",
-    "phrase": "",
-    "note": "/sma:rt/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-038",
-    "term": "bright",
-    "meaning": "adj. 明亮的；聪明的；欢快的；充满幸福的；adv. 明亮地；光辉地",
-    "phrase": "brightness 亮度；聪明；愉快",
-    "note": "/brait/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-039",
-    "term": "brightness",
-    "meaning": "n. 亮度；聪明；愉快",
-    "phrase": "",
-    "note": "/'braitnəs/；拓展词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-040",
-    "term": "brilliant",
-    "meaning": "adj. 有才能的；聪明的；极好的；鲜艳的",
-    "phrase": "",
-    "note": "/'briljənt/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-041",
-    "term": "intelligent",
-    "meaning": "adj. 有智力的；有才智的",
-    "phrase": "intelligence 智力；才智；intellectual 脑力的；智力的",
-    "note": "/in'telidʒənt/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-042",
-    "term": "intelligence",
-    "meaning": "n. 智力；才智",
-    "phrase": "",
-    "note": "/in'telidʒəns/；拓展词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-043",
-    "term": "intellectual",
-    "meaning": "adj. 脑力的；智力的",
-    "phrase": "",
-    "note": "/,intə'lektʃuəl/；拓展词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-044",
-    "term": "stupid",
-    "meaning": "adj. 愚蠢的；笨的；n. 笨蛋；傻瓜",
-    "phrase": "",
-    "note": "/'stu:pid/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-045",
-    "term": "fool",
-    "meaning": "n. 傻子；笨蛋；v. 愚弄；欺骗；adj. 愚蠢的；傻的",
-    "phrase": "foolish 愚蠢的；傻的",
-    "note": "/fu:l/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-046",
-    "term": "foolish",
-    "meaning": "adj. 愚蠢的；傻的",
-    "phrase": "",
-    "note": "/'fu:liʃ/；拓展词",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-047",
-    "term": "silly",
-    "meaning": "adj. 荒谬的；荒唐的；傻的",
-    "phrase": "",
-    "note": "/'sili/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  },
-  {
-    "id": "word-list-5-048",
-    "term": "dull",
-    "meaning": "adj. 乏味的；单调的；呆板的；v. 变钝",
-    "phrase": "",
-    "note": "/dʌl/",
-    "tag": "Word List 5 / 方法智慧与网络",
-    "status": "new",
-    "stage": -1,
-    "nextReviewAt": "",
-    "lastStudiedAt": "",
-    "createdAt": "2026-06-11T09:28:39",
-    "updatedAt": "2026-06-11T09:28:39",
-    "history": []
-  }
-];
-let shouldPersistBuiltinWords = false;
+const BUILTIN_PACKAGE_KEY = "wrong-question-organizer:gaoshu-m001-m004-169-v1";
+const BUILTIN_RECORDS_BASE64 = "W3siaWQiOiJNLTAwMS0wMSIsInRpdGxlIjoiTS0wMDEtMDEg5Ye95pWw55u45ZCM5Yik5patIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlh73mlbDnm7jlkIzliKTmlq0iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIpOaWrSB5PWxneMKyIOS4jiB5PTJsZ3gg562J5Ye95pWw5piv5ZCm55u45ZCMIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5Y+q55yL6Kej5p6Q5byP77yM5b+955Wl5a6a5LmJ5Z+f5ZKM5a+55bqU5YWz57O744CCIiwiYW5hbHlzaXMiOiLliKTmlq3lkIzkuIDlh73mlbDlv4XpobvlkIzml7bnnIvlrprkuYnln5/kuI7lr7nlupTlhbPns7vjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWHveaVsOebuOWQjOWIpOaWrSJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWQjOS4gOWHveaVsOWIpOaWrVxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnnIvlrprkuYnln5/vvJpsZyh4wrIpIOimgeaxgiB44omgMO+8mzJsZ3gg6KaB5rGCIHg+MOOAglxuMi4g5YaN55yL5a+55bqU5YWz57O777ya5ZyoIHg+MCDml7YgbGcoeMKyKT0ybGd477yM5L2GIGxnKHjCsikg6L+Y6IO95Y+WIHg8MOOAglxuMy4g5a6a5LmJ5Z+f5LiN5ZCM77yM5omA5Lul6L+Z5Lik5Liq5Ye95pWw5LiN5piv5ZCM5LiA5Ye95pWw44CCXG40LiDpgYfliLDmoLnlvI/ljJbnroDkuZ/kuIDmoLfvvJriiJooeMKyKT18eHzvvIzkuI3og73nm7TmjqXlhpnmiJAgeOOAglxu44CQ5q2j56Gu57uT6K6644CR5Yik5pat5ZCM5LiA5Ye95pWw5b+F6aG75ZCM5pe25ruh6Laz5a6a5LmJ5Z+f55u45ZCM44CB5a+55bqU5YWz57O755u45ZCM44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muWPqueci+ino+aekOW8j++8jOW/veeVpeWumuS5ieWfn+WSjOWvueW6lOWFs+ezu+OAglxu6Ziy6ZSZ77ya5Yik5pat5ZCM5LiA5Ye95pWw5b+F6aG75ZCM5pe255yL5a6a5LmJ5Z+f5LiO5a+55bqU5YWz57O744CCIn0seyJpZCI6Ik0tMDAxLTAyIiwidGl0bGUiOiJNLTAwMS0wMiDlh73mlbDnm7jlkIzliKTmlq0iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWHveaVsOebuOWQjOWIpOaWrSIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5Yik5patIGYoeCk94oibKHjigbQteMKzKSDkuI4gZyh4KT144oibKHgtMSkg5piv5ZCm55u45ZCMIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5qC55byP5YyW566A5LiN54af77yM5pyq57uf5LiA5a6a5LmJ5Z+f44CCIiwiYW5hbHlzaXMiOiLlhYjljJbnroDvvIzlho3mr5TovoPlrprkuYnln5/lkozlr7nlupTlhbPns7vjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWHveaVsOebuOWQjOWIpOaWrSJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeagueW8j+WMlueugOS4juWQjOS4gOWHveaVsFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjljJbnroDvvJriiJsoeOKBtC14wrMpPeKIm1t4wrMoeC0xKV3jgIJcbjIuIOeri+aWueagueWPr+S7peaKiiB4wrMg5o+Q5Ye65p2l77ya4oibW3jCsyh4LTEpXT144oibKHgtMSnjgIJcbjMuIOS4pOi+uemDveaYr+eri+aWueagueWHveaVsO+8jOWumuS5ieWfn+Wdh+S4uuWFqOS9k+WunuaVsCBS44CCXG40LiDljJbnroDlkI7nmoTlr7nlupTlhbPns7vnm7jlkIzvvIzlrprkuYnln5/kuZ/nm7jlkIzjgIJcbuOAkOato+ehrue7k+iuuuOAkei/meS4pOS4quWHveaVsOebuOWQjOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmoLnlvI/ljJbnroDkuI3nhp/vvIzmnKrnu5/kuIDlrprkuYnln5/jgIJcbumYsumUme+8muWFiOWMlueugO+8jOWGjeavlOi+g+WumuS5ieWfn+WSjOWvueW6lOWFs+ezu+OAgiJ9LHsiaWQiOiJNLTAwMS0wMyIsInRpdGxlIjoiTS0wMDEtMDMg5a6a5LmJ5Z+fIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlrprkuYnln58iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuaxgiB5PWxnKHgrMikrMS/iiJooeMKyLTEpIOeahOWumuS5ieWfnyIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWIhuavjeagueWPt+ivr+eUqCDiiaUw77yM5Y+W5Lqk6ZuG5LiN6KeE6IyD44CCIiwiYW5hbHlzaXMiOiIxL+KImkEg6KaB5rGCIEE+MO+8m+WvueaVsOecn+aVsD4w77yb55S75pWw6L205Y+W5Lqk6ZuG44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLlrprkuYnln58iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlr7nmlbAgKyDliIbmr43moLnlj7flrprkuYnln59cbuOAkOino+mimOatpemqpOOAkVxuMS4g5a+55pWw6KaB5rGC55yf5pWw5aSn5LqOIDDvvJp4KzI+MO+8jOW+lyB4Pi0y44CCXG4yLiDliIbmr43ph4znmoTmoLnlj7fkuI3og73kuLogMO+8muKImih4wrItMSkg5Zyo5YiG5q+N77yM6KaB5rGCIHjCsi0xPjDjgIJcbjMuIOinoyB4wrItMT4w77yM5b6XIHg8LTEg5oiWIHg+MeOAglxuNC4g5LiOIHg+LTIg5Y+W5Lqk6ZuG77yM5b6X5YiwICgtMiwtMSniiKooMSwr4oieKeOAglxu44CQ5q2j56Gu562U5qGI44CR5a6a5LmJ5Z+f5Li6ICgtMiwtMSniiKooMSwr4oieKeOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrliIbmr43moLnlj7for6/nlKgg4omlMO+8jOWPluS6pOmbhuS4jeinhOiMg+OAglxu6Ziy6ZSZ77yaMS/iiJpBIOimgeaxgiBBPjDvvJvlr7nmlbDnnJ/mlbA+MO+8m+eUu+aVsOi9tOWPluS6pOmbhuOAgiJ9LHsiaWQiOiJNLTAwMS0wNCIsInRpdGxlIjoiTS0wMDEtMDQg5a6a5LmJ5Z+fIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlrprkuYnln58iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuaxgiB5PeKImigxNi14wrIpK2FyY3NpbigoMngtMSkvNykg55qE5a6a5LmJ5Z+fIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoiYXJjc2lu5YaF6YOo6IyD5Zu05ZKM5qC55Y+36IyD5Zu05pyq5ZCM5pe25Y+W5Lqk6ZuG44CCIiwiYW5hbHlzaXMiOiJhcmNzaW4gdSDopoHmsYIgLTHiiaR14omkMe+8jOagueWPt+WGheKJpTDjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWumuS5ieWfnyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeagueWPtyArIGFyY3NpbiDlrprkuYnln59cbuOAkOino+mimOatpemqpOOAkVxuMS4g5qC55Y+36KaB5rGCIDE2LXjCsuKJpTDvvIzlvpcgLTTiiaR44omkNOOAglxuMi4gYXJjc2luIHUg6KaB5rGCIC0x4omkdeKJpDHvvIzmiYDku6UgLTHiiaQoMngtMSkvN+KJpDHjgIJcbjMuIOino+S4jeetieW8j+W+lyAtM+KJpHjiiaQ044CCXG40LiDkuKTkuKrojIPlm7Tlj5bkuqTpm4bvvIzlvpcgWy0zLDRd44CCXG7jgJDmraPnoa7nrZTmoYjjgJHlrprkuYnln5/kuLogWy0zLDRd44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mmFyY3NpbuWGhemDqOiMg+WbtOWSjOagueWPt+iMg+WbtOacquWQjOaXtuWPluS6pOmbhuOAglxu6Ziy6ZSZ77yaYXJjc2luIHUg6KaB5rGCIC0x4omkdeKJpDHvvIzmoLnlj7flhoXiiaUw44CCIn0seyJpZCI6Ik0tMDAxLTA1IiwidGl0bGUiOiJNLTAwMS0wNSDkuInop5LlrprkuYnln58iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS4ieinkuWumuS5ieWfnyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCIHk94oiaKDI1LXjCsikrbG4oc2lueCkg55qE5a6a5LmJ5Z+fIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5Y+q5YaZIHNpbng+MO+8jOacquiAg+iZkeWRqOacn+WMuumXtOOAgiIsImFuYWx5c2lzIjoibG4oc2lueCnopoHmsYIgc2lueD4w77yM5YaN5LiO5qC55Y+35Yy66Ze05Y+W5Lqk44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLkuInop5LlrprkuYnln58iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHmoLnlj7cgKyBsbihzaW54KSDlrprkuYnln59cbuOAkOino+mimOatpemqpOOAkVxuMS4g5qC55Y+36KaB5rGCIDI1LXjCsuKJpTDvvIzlvpcgLTXiiaR44omkNeOAglxuMi4gbG4oc2lueCkg6KaB5rGCIHNpbng+MOOAglxuMy4gc2lueD4wIOeahOmAmuino+S4uiB44oiIKDJrz4AsKDJrKzEpz4Ap77yMa+KIiFrjgIJcbjQuIOS4jiBbLTUsNV0g5Y+W5Lqk6ZuG77yM5b6XIFstNSwtz4Ap4oiqKDAsz4Ap44CCXG7jgJDmraPnoa7nrZTmoYjjgJHlrprkuYnln5/kuLogWy01LC3PgCniiKooMCzPgCnjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5Y+q5YaZIHNpbng+MO+8jOacquiAg+iZkeWRqOacn+WMuumXtOOAglxu6Ziy6ZSZ77yabG4oc2lueCnopoHmsYIgc2lueD4w77yM5YaN5LiO5qC55Y+35Yy66Ze05Y+W5Lqk44CCIn0seyJpZCI6Ik0tMDAxLTA2IiwidGl0bGUiOiJNLTAwMS0wNiDlpI3lkIjlrprkuYnln58iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWkjeWQiOWumuS5ieWfnyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5bey55+lIGYoeCkg5a6a5LmJ5Z+fWzAsMV3vvIzmsYIgZihsbngpIOWumuS5ieWfnyIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuayoeacieaKiiBsbngg5b2T5pW05L2T5Luj5YWlIGYg55qE5a6a5LmJ5Z+f44CCIiwiYW5hbHlzaXMiOiLku6QgbG544oiIWzAsMV0g5YaN6KejeOOAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi5aSN5ZCI5a6a5LmJ5Z+fIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5aSN5ZCI5Ye95pWw5a6a5LmJ5Z+fXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOW3suefpSBmKHgpIOeahOWumuS5ieWfn+S4uiBbMCwxXe+8jOivtOaYjiBmKOaLrOWPtykg5Lit55qE5ous5Y+35pW05L2T5b+F6aG76JC95ZyoIFswLDFd44CCXG4yLiDlr7kgZihsbngp77yM5LukIGxueOKIiFswLDFd44CCXG4zLiDop6MgMOKJpGxueOKJpDHvvIzlvpcgMeKJpHjiiaRl44CCXG7jgJDmraPnoa7nrZTmoYjjgJHlrprkuYnln5/kuLogWzEsZV3jgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5rKh5pyJ5oqKIGxueCDlvZPmlbTkvZPku6PlhaUgZiDnmoTlrprkuYnln5/jgIJcbumYsumUme+8muS7pCBsbnjiiIhbMCwxXSDlho3op6N444CCIn0seyJpZCI6Ik0tMDAxLTA3IiwidGl0bGUiOiJNLTAwMS0wNyDlpI3lkIjlrprkuYnln58iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWkjeWQiOWumuS5ieWfnyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5bey55+lIGYoMngrMSkg5a6a5LmJ5Z+fWzMsNV3vvIzmsYIgZih4LTEpIOWumuS5ieWfnyIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuayoeacieWFiOaxgiBmKHUpIOeahOecn+WunuWumuS5ieWfn+OAgiIsImFuYWx5c2lzIjoi5YWI55Sx5Y6feOiMg+WbtOaxgjJ4KzHojIPlm7TvvIzlho3orqnmlrDlhoXlsYLokL3lhaXor6XojIPlm7TjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWkjeWQiOWumuS5ieWfnyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWkjeWQiOWumuS5ieWfn1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDmiormiYDmnInpmZDliLbpgJDpobnliJflh7rmnaXvvJrliIbmr43iiaAw77yM5YG25qyh5qC55Y+35YaF4omlMO+8jOWvueaVsOecn+aVsD4w77yM5Y+N5LiJ6KeS5YaF6YOo5Zyo5YWB6K646IyD5Zu05YaF44CCXG4yLiDlpoLmnpzmoLnlj7flnKjliIbmr43vvIzlv4XpobvlhpnmiJDmoLnlj7flhoU+MOOAglxuMy4g5aaC5p6c5pyJ5aSN5ZCI5Ye95pWw77yM5YWI5oqK5YaF5bGC5pW05L2T5Luj5YWl5aSW5bGC5a6a5LmJ5Z+f44CCXG40LiDop6Plh7rmr4/kuKrpmZDliLblkI7nlLvmlbDovbTlj5bkuqTpm4bvvIznq6/ngrnlvIDpl63opoHpgJDkuKrmo4Dmn6XjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmsqHmnInlhYjmsYIgZih1KSDnmoTnnJ/lrp7lrprkuYnln5/jgIJcbumYsumUme+8muWFiOeUseWOn3jojIPlm7TmsYIyeCsx6IyD5Zu077yM5YaN6K6p5paw5YaF5bGC6JC95YWl6K+l6IyD5Zu044CCIn0seyJpZCI6Ik0tMDAxLTA4IiwidGl0bGUiOiJNLTAwMS0wOCDlpI3mnYLlrprkuYnln58iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWkjeadguWumuS5ieWfnyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCIHk94oiaKDQteMKyKSsxL2xuKGNvc3gpIOeahOWumuS5ieWfnyIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iua8j+WIlyBsbihjb3N4KeKJoDAg5LiOIGNvc3g+MOOAgiIsImFuYWx5c2lzIjoi5aSa6ZmQ5Yi26YCQ6aG55YiX77ya5qC55Y+344CB5a+55pWw44CB5YiG5q+N44CB5LiJ6KeS44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLlpI3mnYLlrprkuYnln58iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlpI3mnYLlrprkuYnln59cbuOAkOino+mimOatpemqpOOAkVxuMS4g5qC55Y+36KaB5rGCIDQteMKy4omlMO+8jOW+lyAtMuKJpHjiiaQy44CCXG4yLiBsbihjb3N4KSDmnInmhI/kuYnopoHmsYIgY29zeD4w44CCXG4zLiDliIbmr40gbG4oY29zeCkg5LiN6IO95Li6IDDvvIzmiYDku6UgY29zeOKJoDHjgIJcbjQuIOWcqCBbLTIsMl0g5YaF77yMY29zeD4wIOW+lyB44oiIKC3PgC8yLM+ALzIp77yM5YaN5o6S6ZmkIHg9MOOAglxu44CQ5q2j56Gu562U5qGI44CR5a6a5LmJ5Z+f5Li6ICgtz4AvMiwwKeKIqigwLM+ALzIp44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mua8j+WIlyBsbihjb3N4KeKJoDAg5LiOIGNvc3g+MOOAglxu6Ziy6ZSZ77ya5aSa6ZmQ5Yi26YCQ6aG55YiX77ya5qC55Y+344CB5a+55pWw44CB5YiG5q+N44CB5LiJ6KeS44CCIn0seyJpZCI6Ik0tMDAxLTA5IiwidGl0bGUiOiJNLTAwMS0wOSDlpI3lkIgr5YiG5q+N5qC55Y+3Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlpI3lkIgr5YiG5q+N5qC55Y+3Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLlt7Lnn6UgZih4LTMp5a6a5LmJ5Z+fWzAsM13vvIxnKHgpPWYoeCkv4oiaKDJ4KzEp77yM5rGCZ+WumuS5ieWfnyIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWPquWkhOeQhmbpmZDliLbvvIzmvI/liIbmr43moLnlj7fpmZDliLbjgIIiLCJhbmFseXNpcyI6IuWFiOaxgmbnnJ/lrp7lrprkuYnln5/vvIzlho3liJcyeCsxPjDlubblj5bkuqTjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWkjeWQiCvliIbmr43moLnlj7ciXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlpI3lkIgr5YiG5q+N5qC55Y+3XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOaKiuaJgOaciemZkOWItumAkOmhueWIl+WHuuadpe+8muWIhuavjeKJoDDvvIzlgbbmrKHmoLnlj7flhoXiiaUw77yM5a+55pWw55yf5pWwPjDvvIzlj43kuInop5LlhoXpg6jlnKjlhYHorrjojIPlm7TlhoXjgIJcbjIuIOWmguaenOagueWPt+WcqOWIhuavje+8jOW/hemhu+WGmeaIkOagueWPt+WGhT4w44CCXG4zLiDlpoLmnpzmnInlpI3lkIjlh73mlbDvvIzlhYjmiorlhoXlsYLmlbTkvZPku6PlhaXlpJblsYLlrprkuYnln5/jgIJcbjQuIOino+WHuuavj+S4qumZkOWItuWQjueUu+aVsOi9tOWPluS6pOmbhu+8jOerr+eCueW8gOmXreimgemAkOS4quajgOafpeOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muWPquWkhOeQhmbpmZDliLbvvIzmvI/liIbmr43moLnlj7fpmZDliLbjgIJcbumYsumUme+8muWFiOaxgmbnnJ/lrp7lrprkuYnln5/vvIzlho3liJcyeCsxPjDlubblj5bkuqTjgIIifSx7ImlkIjoiTS0wMDEtMTAiLCJ0aXRsZSI6Ik0tMDAxLTEwIOaMh+aVsOWkjeWQiCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5oyH5pWw5aSN5ZCIIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLlt7Lnn6UgZih4KeWumuS5ieWfnygwLDEp77yM5rGCIGYoMl54KSDlrprkuYnln58iLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLnm7TmjqXlpZd44oiIKDAsMSnvvIzmnKrku6QyXnjiiIgoMCwxKeOAgiIsImFuYWx5c2lzIjoi5YaF5bGC5pW05L2T5b+F6aG76JC95YWl5aSW5bGC5a6a5LmJ5Z+f44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLmjIfmlbDlpI3lkIgiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHmjIfmlbDlpI3lkIjlrprkuYnln59cbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqKIDJeeCDnnIvmiJDmlbTkvZPvvIzkuI3opoHnm7TmjqXlpZcgeCDnmoTojIPlm7TjgIJcbjIuIOiLpSBmIOeahOWumuS5ieWfn+imgeaxguaLrOWPt+WcqCAoMCwxKe+8jOWImeS7pCAyXnjiiIgoMCwxKeOAglxuMy4g55Sx5LqOIDJeeD4wIOaBkuaIkOeri++8jOWPqumcgCAyXng8MeOAglxuNC4g6Kej5b6XIHg8MOOAglxu44CQ5q2j56Gu562U5qGI44CReOKIiCgt4oieLDAp44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muebtOaOpeWll3jiiIgoMCwxKe+8jOacquS7pDJeeOKIiCgwLDEp44CCXG7pmLLplJnvvJrlhoXlsYLmlbTkvZPlv4XpobvokL3lhaXlpJblsYLlrprkuYnln5/jgIIifSx7ImlkIjoiTS0wMDEtMTEiLCJ0aXRsZSI6Ik0tMDAxLTExIOWPjeWHveaVsCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5Y+N5Ye95pWwIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYIgeT3Cs+KImih4KzEpIOeahOWPjeWHveaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuS6pOaNongseeWSjOino3nmraXpqqTkuI3nhp/jgIIiLCJhbmFseXNpcyI6IuWGmXk9Li4u77yM5Lqk5o2ieCx577yM6Kej5Ye6eeW5tuWGmeWumuS5ieWfn+OAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi5Y+N5Ye95pWwIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Y+N5Ye95pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOiuviB5PeKImyh4KzEp44CCXG4yLiDkuKTovrnnq4vmlrnvvJp5wrM9eCsx44CCXG4zLiDop6Plh7ogeO+8mng9ecKzLTHjgIJcbjQuIOS6pOaNoiB444CBee+8jOW+l+WIsCB5PXjCsy0x44CCXG7jgJDmraPnoa7nrZTmoYjjgJHlj43lh73mlbDkuLogZuKBu8K5KHgpPXjCsy0x44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muS6pOaNongseeWSjOino3nmraXpqqTkuI3nhp/jgIJcbumYsumUme+8muWGmXk9Li4u77yM5Lqk5o2ieCx577yM6Kej5Ye6eeW5tuWGmeWumuS5ieWfn+OAgiJ9LHsiaWQiOiJNLTAwMS0xMiIsInRpdGxlIjoiTS0wMDEtMTIg5Y+N5Ye95pWwIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlj43lh73mlbAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuaxgiB5PTJeeC8oMl54KzEpIOeahOWPjeWHveaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuinozJeeOaXtuenu+mhueS4jeeos++8jOWPjeWHveaVsOWumuS5ieWfn+W/veeVpeOAgiIsImFuYWx5c2lzIjoi5LukeT0uLi7vvIzop6MyXnjvvIzlho3lj5Zsb2fjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWPjeWHveaVsCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeaMh+aVsOWIhuW8j+WPjeWHveaVsFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDorr4geT0yXngvKDJeeCsxKe+8jOS7pCB0PTJeeO+8jHQ+MOOAglxuMi4g5b6XIHk9dC8odCsxKeOAguenu+mhue+8mnkodCsxKT1077yM5Y2zIHl0K3k9dOOAglxuMy4g5pW055CG77yaeT10KDEteSnvvIzmiYDku6UgdD15LygxLXkp44CCXG40LiDov5jljp/vvJoyXng9eS8oMS15Ke+8jOaJgOS7pSB4PWxvZ+KCglt5LygxLXkpXeOAglxuNS4g5Y6f5Ye95pWw5YC85Z+f5Li6ICgwLDEp77yM5omA5Lul5Y+N5Ye95pWw5a6a5LmJ5Z+f5Li6ICgwLDEp44CCXG7jgJDmraPnoa7nrZTmoYjjgJFm4oG7wrkoeCk9bG9n4oKCW3gvKDEteCld77yMeOKIiCgwLDEp44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muinozJeeOaXtuenu+mhueS4jeeos++8jOWPjeWHveaVsOWumuS5ieWfn+W/veeVpeOAglxu6Ziy6ZSZ77ya5LukeT0uLi7vvIzop6MyXnjvvIzlho3lj5Zsb2fjgIIifSx7ImlkIjoiTS0wMDEtMTMiLCJ0aXRsZSI6Ik0tMDAxLTEzIOWPjeWHveaVsCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5Y+N5Ye95pWwIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYIgeT0oc2luM3gpLzLvvIx44oiIWy3PgC82LM+ALzZdIOeahOWPjeWHveaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuW/veeVpee7meWumuWMuumXtOWSjOWAvOWfn+OAgiIsImFuYWx5c2lzIjoi5Y+N5Ye95pWw5a6a5LmJ5Z+fPeWOn+WHveaVsOWAvOWfn++8m+WFiOaxguWNleiwg+WSjOWAvOWfn+OAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi5Y+N5Ye95pWwIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Y+N5Ye95pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOiuviB5PWYoeCnvvIzlhYjkuI3opoHmgKXnnYDkuqTmjaIgeOOAgXnjgIJcbjIuIOeUqOS7o+aVsOWPmOW9ouaKiiB4IOeUqCB5IOihqOekuuWHuuadpeOAglxuMy4g5Lqk5o2iIHjjgIF577yM5b6X5Yiw5Y+N5Ye95pWw6KGo6L6+5byP44CCXG40LiDlj43lh73mlbDnmoTlrprkuYnln5/mnaXoh6rljp/lh73mlbDnmoTlgLzln5/vvIzlgLzln5/mnaXoh6rljp/lh73mlbDnmoTlrprkuYnln5/lkozljZXosIPljLrpl7TjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlv73nlaXnu5nlrprljLrpl7TlkozlgLzln5/jgIJcbumYsumUme+8muWPjeWHveaVsOWumuS5ieWfnz3ljp/lh73mlbDlgLzln5/vvJvlhYjmsYLljZXosIPlkozlgLzln5/jgIIifSx7ImlkIjoiTS0wMDEtMTQiLCJ0aXRsZSI6Ik0tMDAxLTE0IOaNouWFgyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5o2i5YWDIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLlt7Lnn6UgZigoMS14KS8oMSt4KSk9eO+8jOaxgiBmKHgpIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5LiN5Lya5Luk5ous5Y+35pW05L2T5Li6dOW5tuWPjeino3jjgIIiLCJhbmFseXNpcyI6IuS7pHQ9KDEteCkvKDEreCnvvIzlj43op6N477yM5Luj5Zue44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLmjaLlhYMiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHmjaLlhYNcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI55yL5pyA6YeM6Z2i55qE5ous5Y+377yM5oqK5YaF5bGC57uT5p6c5b2T5oiQ5pW05L2T44CCXG4yLiDoi6Xpopjnm67nu5kgZijmn5Dooajovr7lvI8p77yM5YWI5Luk5paw5Y+Y6YePIHQ95p+Q6KGo6L6+5byP77yM5Y+N6Kej5Y6f5Y+Y6YeP44CCXG4zLiDliIbmrrXlh73mlbDopoHlhYjliKTmlq3lhoXlsYLlh73mlbDlgLzokL3lnKjlk6rkuIDmrrXvvIzlho3ku6PlhaXlpJblsYLjgIJcbjQuIOWkmumHjeWkjeWQiOW/hemhu+S7juWGheWQkeWkluS4gOWxguS4gOWxgueul++8jOS4jeiDvei3s+atpeOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muS4jeS8muS7pOaLrOWPt+aVtOS9k+S4unTlubblj43op6N444CCXG7pmLLplJnvvJrku6R0PSgxLXgpLygxK3gp77yM5Y+N6KejeO+8jOS7o+WbnuOAgiJ9LHsiaWQiOiJNLTAwMS0xNSIsInRpdGxlIjoiTS0wMDEtMTUg5YiG5q615aSN5ZCIIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLliIbmrrXlpI3lkIgiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIhuauteWHveaVsCBmKHgpPXsyeCx44omkMDsgeMKyLHjiiaUwfe+8jOaxgiBmKGYoeCkpIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5pyq5Yik5pat5YaF5bGCZih4Kei+k+WHuuiQveWcqOWTquS4gOauteOAgiIsImFuYWx5c2lzIjoi5YWI566X5YaF5bGC6IyD5Zu077yM5YaN5Luj5YWl5a+55bqU5YiG5q6144CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLliIbmrrXlpI3lkIgiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHliIbmrrXlpI3lkIhcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI55yL5pyA6YeM6Z2i55qE5ous5Y+377yM5oqK5YaF5bGC57uT5p6c5b2T5oiQ5pW05L2T44CCXG4yLiDoi6Xpopjnm67nu5kgZijmn5Dooajovr7lvI8p77yM5YWI5Luk5paw5Y+Y6YePIHQ95p+Q6KGo6L6+5byP77yM5Y+N6Kej5Y6f5Y+Y6YeP44CCXG4zLiDliIbmrrXlh73mlbDopoHlhYjliKTmlq3lhoXlsYLlh73mlbDlgLzokL3lnKjlk6rkuIDmrrXvvIzlho3ku6PlhaXlpJblsYLjgIJcbjQuIOWkmumHjeWkjeWQiOW/hemhu+S7juWGheWQkeWkluS4gOWxguS4gOWxgueul++8jOS4jeiDvei3s+atpeOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muacquWIpOaWreWGheWxgmYoeCnovpPlh7rokL3lnKjlk6rkuIDmrrXjgIJcbumYsumUme+8muWFiOeul+WGheWxguiMg+WbtO+8jOWGjeS7o+WFpeWvueW6lOWIhuauteOAgiJ9LHsiaWQiOiJNLTAwMS0xNiIsInRpdGxlIjoiTS0wMDEtMTYg5aSa6YeN5aSN5ZCIIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlpJrph43lpI3lkIgiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuiuviBmKHgpPTEvKDEteCnvvIzmsYIgZntmW2YoeCldfSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuayoeacieS7juacgOWGheWxgumAkOWxguS7o+WFpeOAgiIsImFuYWx5c2lzIjoi5aSN5ZCI5Ye95pWw5LuO6YeM5ZCR5aSW77yM5LiA5bGC5LiA5bGC5YyW566A44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLlpJrph43lpI3lkIgiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlpJrph43lpI3lkIhcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI55yL5pyA6YeM6Z2i55qE5ous5Y+377yM5oqK5YaF5bGC57uT5p6c5b2T5oiQ5pW05L2T44CCXG4yLiDoi6Xpopjnm67nu5kgZijmn5Dooajovr7lvI8p77yM5YWI5Luk5paw5Y+Y6YePIHQ95p+Q6KGo6L6+5byP77yM5Y+N6Kej5Y6f5Y+Y6YeP44CCXG4zLiDliIbmrrXlh73mlbDopoHlhYjliKTmlq3lhoXlsYLlh73mlbDlgLzokL3lnKjlk6rkuIDmrrXvvIzlho3ku6PlhaXlpJblsYLjgIJcbjQuIOWkmumHjeWkjeWQiOW/hemhu+S7juWGheWQkeWkluS4gOWxguS4gOWxgueul++8jOS4jeiDvei3s+atpeOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muayoeacieS7juacgOWGheWxgumAkOWxguS7o+WFpeOAglxu6Ziy6ZSZ77ya5aSN5ZCI5Ye95pWw5LuO6YeM5ZCR5aSW77yM5LiA5bGC5LiA5bGC5YyW566A44CCIn0seyJpZCI6Ik0tMDAxLTE3IiwidGl0bGUiOiJNLTAwMS0xNyDlj43lkJHlpI3lkIgiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWPjeWQkeWkjeWQiCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5bey55+lIGYoeCk9ZV5477yMZlvPhih4KV09MSsyeO+8jOaxgs+GKHgpIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5rKh5pyJ5oOz5Yiw5a+5IGVee8+GKHgpfSDlj5ZsbuOAgiIsImFuYWx5c2lzIjoiZV5BPUIg5pe2IEE9bG5C44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLlj43lkJHlpI3lkIgiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlj43lkJHlpI3lkIhcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI55yL5pyA6YeM6Z2i55qE5ous5Y+377yM5oqK5YaF5bGC57uT5p6c5b2T5oiQ5pW05L2T44CCXG4yLiDoi6Xpopjnm67nu5kgZijmn5Dooajovr7lvI8p77yM5YWI5Luk5paw5Y+Y6YePIHQ95p+Q6KGo6L6+5byP77yM5Y+N6Kej5Y6f5Y+Y6YeP44CCXG4zLiDliIbmrrXlh73mlbDopoHlhYjliKTmlq3lhoXlsYLlh73mlbDlgLzokL3lnKjlk6rkuIDmrrXvvIzlho3ku6PlhaXlpJblsYLjgIJcbjQuIOWkmumHjeWkjeWQiOW/hemhu+S7juWGheWQkeWkluS4gOWxguS4gOWxgueul++8jOS4jeiDvei3s+atpeOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muayoeacieaDs+WIsOWvuSBlXnvPhih4KX0g5Y+WbG7jgIJcbumYsumUme+8mmVeQT1CIOaXtiBBPWxuQuOAgiJ9LHsiaWQiOiJNLTAwMS0xOCIsInRpdGxlIjoiTS0wMDEtMTgg5aWH5YG25oCnIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlpYflgbbmgKciLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIpOaWrSBmKHgpPWxuKOKImigxK3jCsikteCkg55qE5aWH5YG25oCnIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5LiN5Lya5pyJ55CG5YyW5q+U6L6DZigteCnkuI5mKHgp44CCIiwiYW5hbHlzaXMiOiLlhYjnnIvlrprkuYnln5/lr7nnp7DvvIzlho3nrpdmKC14Ke+8jOW/heimgeaXtuacieeQhuWMluOAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi5aWH5YG25oCnIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5aWH5YG25oCnXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOajgOafpeWumuS5ieWfn+aYr+WQpuWFs+S6jiAwIOWvueensO+8m+S4jeWvueensOWImeS4jeiDveWIpOS4uuWlh+WHveaVsOaIluWBtuWHveaVsOOAglxuMi4g6K6h566XIGYoLXgp77yM5oqK5byP5a2Q5YyW5Yiw6IO95ZKMIGYoeCkg5q+U6L6D55qE5b2i5byP44CCXG4zLiDoi6UgZigteCk9Zih4Ke+8jOS4uuWBtuWHveaVsO+8m+iLpSBmKC14KT0tZih4Ke+8jOS4uuWlh+WHveaVsOOAglxuNC4g5oyH5pWw44CB5a+55pWw44CB5qC55byP6aKY6KaB5YWI6YCa5YiG44CB5pyJ55CG5YyW5oiW57uf5LiA5bqV5pWw5ZCO5YaN5q+U6L6D44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LiN5Lya5pyJ55CG5YyW5q+U6L6DZigteCnkuI5mKHgp44CCXG7pmLLplJnvvJrlhYjnnIvlrprkuYnln5/lr7nnp7DvvIzlho3nrpdmKC14Ke+8jOW/heimgeaXtuacieeQhuWMluOAgiJ9LHsiaWQiOiJNLTAwMS0xOSIsInRpdGxlIjoiTS0wMDEtMTkg5aWH5YG25oCnIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlpYflgbbmgKciLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIpOaWrSBmKHgpPXhjb3N4K3Npbngg55qE5aWH5YG25oCnIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5ryP55yLY29zeOWJjemdoueahHjjgIIiLCJhbmFseXNpcyI6IuWciOWHuuavj+mhueeahHjjgIHns7vmlbDjgIHlh73mlbDjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWlh+WBtuaApyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWlh+WBtuaAp1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmo4Dmn6XlrprkuYnln5/mmK/lkKblhbPkuo4gMCDlr7nnp7DvvJvkuI3lr7nnp7DliJnkuI3og73liKTkuLrlpYflh73mlbDmiJblgbblh73mlbDjgIJcbjIuIOiuoeeulyBmKC14Ke+8jOaKiuW8j+WtkOWMluWIsOiDveWSjCBmKHgpIOavlOi+g+eahOW9ouW8j+OAglxuMy4g6IulIGYoLXgpPWYoeCnvvIzkuLrlgbblh73mlbDvvJvoi6UgZigteCk9LWYoeCnvvIzkuLrlpYflh73mlbDjgIJcbjQuIOaMh+aVsOOAgeWvueaVsOOAgeagueW8j+mimOimgeWFiOmAmuWIhuOAgeacieeQhuWMluaIlue7n+S4gOW6leaVsOWQjuWGjeavlOi+g+OAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mua8j+eci2Nvc3jliY3pnaLnmoR444CCXG7pmLLplJnvvJrlnIjlh7rmr4/pobnnmoR444CB57O75pWw44CB5Ye95pWw44CCIn0seyJpZCI6Ik0tMDAxLTIwIiwidGl0bGUiOiJNLTAwMS0yMCDlpYflgbbmgKciLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWlh+WBtuaApyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5Yik5patIGYoeCk9MS8oZV54KzEpLTEvMiDnmoTlpYflgbbmgKciLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLkuI3kvJrpgJrliIbmr5TovoNmKC14KeS4ji1mKHgp44CCIiwiYW5hbHlzaXMiOiLlpITnkIZlXnsteH09MS9lXnjvvIzlho3pgJrliIbjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWlh+WBtuaApyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWlh+WBtuaAp1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmo4Dmn6XlrprkuYnln5/mmK/lkKblhbPkuo4gMCDlr7nnp7DvvJvkuI3lr7nnp7DliJnkuI3og73liKTkuLrlpYflh73mlbDmiJblgbblh73mlbDjgIJcbjIuIOiuoeeulyBmKC14Ke+8jOaKiuW8j+WtkOWMluWIsOiDveWSjCBmKHgpIOavlOi+g+eahOW9ouW8j+OAglxuMy4g6IulIGYoLXgpPWYoeCnvvIzkuLrlgbblh73mlbDvvJvoi6UgZigteCk9LWYoeCnvvIzkuLrlpYflh73mlbDjgIJcbjQuIOaMh+aVsOOAgeWvueaVsOOAgeagueW8j+mimOimgeWFiOmAmuWIhuOAgeacieeQhuWMluaIlue7n+S4gOW6leaVsOWQjuWGjeavlOi+g+OAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muS4jeS8mumAmuWIhuavlOi+g2YoLXgp5LiOLWYoeCnjgIJcbumYsumUme+8muWkhOeQhmVeey14fT0xL2VeeO+8jOWGjemAmuWIhuOAgiJ9LHsiaWQiOiJNLTAwMS0yMSIsInRpdGxlIjoiTS0wMDEtMjEg5p6B6ZmQ5a2Y5ZyoIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLmnoHpmZDlrZjlnKgiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIpOaWrSB44oaS4oieIOaXtiB5PWVeeOOAgXk9YXJjdGFueCDmnoHpmZDmmK/lkKblrZjlnKgiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmiorotovkuo7iiJ7kuZ/lvZPmnInpmZDmnoHpmZDlrZjlnKjjgIIiLCJhbmFseXNpcyI6IuS4k+WNh+acrOW4uOaMieaciemZkOaegemZkOWIpOaWre+8m+i2i+S6juaciemZkOaVsOaJjeWtmOWcqOOAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi5p6B6ZmQ5a2Y5ZyoIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5p6B6ZmQ5a2Y5ZyoXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOWIpOaWreaegemZkOexu+Wei++8muebtOaOpeS7o+WFpeOAgTAvMOOAgeKIni/iiJ7jgIHml6DnqbflpKfph4/jgIHluYLmjIflnovmiJbmlbDliJflnovjgIJcbjIuIDAvMCDlnovkvJjlhYjogIPomZHnrYnku7fml6DnqbflsI/jgIHlm6DlvI/liIbop6PjgIHpgJrliIbjgIHmnInnkIbljJbmiJbmtJvlv4Xovr7jgIJcbjMuIOS4ieinkuaegemZkOiusOS9jyBzaW5heH5heOOAgXRhbmF4fmF444CBMS1jb3N4fnjCsi8y44CCXG40LiDluYLmjIflnovnu5/kuIDlhpnmiJAgZV575oyH5pWwwrdsbuW6leaVsH3vvIzlhYjmsYLmjIfmlbDkuIrnmoTmnoHpmZDjgIJcbjUuIOaVsOWIl+WIhuW8j+eci+acgOmrmOasoe+8m+aMh+aVsOWei+WFiOavlOi+g+acgOWkp+W6leaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muaKiui2i+S6juKInuS5n+W9k+aciemZkOaegemZkOWtmOWcqOOAglxu6Ziy6ZSZ77ya5LiT5Y2H5pys5bi45oyJ5pyJ6ZmQ5p6B6ZmQ5Yik5pat77yb6LaL5LqO5pyJ6ZmQ5pWw5omN5a2Y5Zyo44CCIn0seyJpZCI6Ik0tMDAxLTIyIiwidGl0bGUiOiJNLTAwMS0yMiDlt6blj7PmnoHpmZAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuW3puWPs+aegemZkCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5Yik5patIGxpbSh44oaSMCl8eHwveCDmmK/lkKblrZjlnKgiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmnKrmr5TovoPlt6blj7PmnoHpmZDjgIIiLCJhbmFseXNpcyI6IuW3puaegemZkD0tMe+8jOWPs+aegemZkD0x77yM5LiN55u4562J5YiZ5LiN5a2Y5Zyo44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLlt6blj7PmnoHpmZAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlt6blj7PmnoHpmZBcbuOAkOino+mimOatpemqpOOAkVxuMS4g5b2TIHjihpIwKyDml7bvvIx8eHw9eO+8jOaJgOS7pSB8eHwveD0x44CCXG4yLiDlvZMgeOKGkjAtIOaXtu+8jHx4fD0teO+8jOaJgOS7pSB8eHwveD0tMeOAglxuMy4g5bem5Y+z5p6B6ZmQ5LiN55u4562J77yM5omA5Lul5LqM5L6n5p6B6ZmQ5LiN5a2Y5Zyo44CCXG7jgJDmraPnoa7nrZTmoYjjgJFsaW0oeOKGkjApfHh8L3gg5LiN5a2Y5Zyo44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muacquavlOi+g+W3puWPs+aegemZkOOAglxu6Ziy6ZSZ77ya5bem5p6B6ZmQPS0x77yM5Y+z5p6B6ZmQPTHvvIzkuI3nm7jnrYnliJnkuI3lrZjlnKjjgIIifSx7ImlkIjoiTS0wMDEtMjMiLCJ0aXRsZSI6Ik0tMDAxLTIzIOaXoOept+Wkp+mHjyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5peg56m35aSn6YePIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLliKTmlq0gbGltKHjihpIwKTEveMKyIOaYr+WQpuWtmOWcqCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuaKiui2i+S6jiviiJ7lvZPkvZzmnInpmZDmnoHpmZDlrZjlnKjjgIIiLCJhbmFseXNpcyI6Iui2i+S6jiviiJ7kuI3mmK/mnInpmZDmnoHpmZDjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuaXoOept+Wkp+mHjyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeaXoOept+Wkp+mHj+S4juaciemZkOaegemZkFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiB44oaSMCDml7bvvIx4wrLihpIwK+OAglxuMi4gMS94wrIg5Lya6LaK5p2l6LaK5aSn77yM6LaL5ZCRICviiJ7jgIJcbjMuIOS4k+WNh+acrOmimOmHjOivtOKAnOaegemZkOWtmOWcqOKAnemAmuW4uOaMh+WtmOWcqOaciemZkOaVsOWAvOOAglxu44CQ5q2j56Gu57uT6K6644CR6LaL5LqOICviiJ7vvIzmnInpmZDmnoHpmZDkuI3lrZjlnKjjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5oqK6LaL5LqOK+KInuW9k+S9nOaciemZkOaegemZkOWtmOWcqOOAglxu6Ziy6ZSZ77ya6LaL5LqOK+KInuS4jeaYr+aciemZkOaegemZkOOAgiJ9LHsiaWQiOiJNLTAwMS0yNCIsInRpdGxlIjoiTS0wMDEtMjQg6YeN6KaB5p6B6ZmQIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLph43opoHmnoHpmZAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuaxgiBsaW0oeOKGkjApIHNpbjV4L3NpbjJ4Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi57O75pWw55yL5Y+N44CCIiwiYW5hbHlzaXMiOiJzaW5heC9zaW5ieOKGkmEvYuOAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi6YeN6KaB5p6B6ZmQIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR56ys5LiA6YeN6KaB5p6B6ZmQXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOeUqOWFrOW8jyBsaW0oeOKGkjApIHNpbihheCkvc2luKGJ4KT1hL2LjgIJcbjIuIOacrOmimCBhPTXvvIxiPTLjgIJcbjMuIOaJgOS7peaegemZkOS4uiA1LzLjgIJcbuOAkOato+ehruetlOahiOOAkTUvMuOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrns7vmlbDnnIvlj43jgIJcbumYsumUme+8mnNpbmF4L3NpbmJ44oaSYS9i44CCIn0seyJpZCI6Ik0tMDAxLTI1IiwidGl0bGUiOiJNLTAwMS0yNSDnrYnku7fml6DnqbflsI8iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuetieS7t+aXoOept+WwjyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCIGxpbSh44oaSMCkoMS1jb3N4KS94wrIiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLkuI3nhp8xLWNvc3h+eMKyLzLjgIIiLCJhbmFseXNpcyI6IuebtOaOpeiusOWFrOW8j++8jOe7k+aenDEvMuOAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi562J5Lu35peg56m35bCPIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR562J5Lu35peg56m35bCPXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIHjihpIwIOaXtu+8jDEtY29zeCB+IHjCsi8y44CCXG4yLiDlsIbliIblrZDmm7/mjaLkuLogeMKyLzLjgIJcbjMuICgxLWNvc3gpL3jCsiDihpIgKHjCsi8yKS94wrI9MS8y44CCXG7jgJDmraPnoa7nrZTmoYjjgJExLzLjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LiN54afMS1jb3N4fnjCsi8y44CCXG7pmLLplJnvvJrnm7TmjqXorrDlhazlvI/vvIznu5PmnpwxLzLjgIIifSx7ImlkIjoiTS0wMDEtMjYiLCJ0aXRsZSI6Ik0tMDAxLTI2IOaVsOWIl+aegemZkCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5pWw5YiX5p6B6ZmQIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYIgbGltKG7ihpLiiJ4pKDduKzEpLygzbi0yKSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuacgOmrmOasoeezu+aVsOavlOeci+WPjeOAgiIsImFuYWx5c2lzIjoi5ZCM5qyh5aSa6aG55byP5p6B6ZmQPeacgOmrmOasoeezu+aVsOavlOOAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi5pWw5YiX5p6B6ZmQIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5pWw5YiX5p6B6ZmQXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOWIpOaWreaegemZkOexu+Wei++8muebtOaOpeS7o+WFpeOAgTAvMOOAgeKIni/iiJ7jgIHml6DnqbflpKfph4/jgIHluYLmjIflnovmiJbmlbDliJflnovjgIJcbjIuIDAvMCDlnovkvJjlhYjogIPomZHnrYnku7fml6DnqbflsI/jgIHlm6DlvI/liIbop6PjgIHpgJrliIbjgIHmnInnkIbljJbmiJbmtJvlv4Xovr7jgIJcbjMuIOS4ieinkuaegemZkOiusOS9jyBzaW5heH5heOOAgXRhbmF4fmF444CBMS1jb3N4fnjCsi8y44CCXG40LiDluYLmjIflnovnu5/kuIDlhpnmiJAgZV575oyH5pWwwrdsbuW6leaVsH3vvIzlhYjmsYLmjIfmlbDkuIrnmoTmnoHpmZDjgIJcbjUuIOaVsOWIl+WIhuW8j+eci+acgOmrmOasoe+8m+aMh+aVsOWei+WFiOavlOi+g+acgOWkp+W6leaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muacgOmrmOasoeezu+aVsOavlOeci+WPjeOAglxu6Ziy6ZSZ77ya5ZCM5qyh5aSa6aG55byP5p6B6ZmQPeacgOmrmOasoeezu+aVsOavlOOAgiJ9LHsiaWQiOiJNLTAwMS0yNyIsInRpdGxlIjoiTS0wMDEtMjcg562J5Lu35peg56m35bCPIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLnrYnku7fml6DnqbflsI8iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuaxgiBsaW0oeOKGkjApdGFuM3gvc2luNHgiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiJ0YW7kuI5zaW7nmoTns7vmlbDmm7/mjaLkuI3nqLPjgIIiLCJhbmFseXNpcyI6InRhbmF4fmF477yMc2luYnh+YnjvvIznu5PmnpxhL2LjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuetieS7t+aXoOept+WwjyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeetieS7t+aXoOept+Wwj1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjliKTmlq3mnoHpmZDnsbvlnovvvJrnm7TmjqXku6PlhaXjgIEwLzDjgIHiiJ4v4oie44CB5peg56m35aSn6YeP44CB5bmC5oyH5Z6L5oiW5pWw5YiX5Z6L44CCXG4yLiAwLzAg5Z6L5LyY5YWI6ICD6JmR562J5Lu35peg56m35bCP44CB5Zug5byP5YiG6Kej44CB6YCa5YiG44CB5pyJ55CG5YyW5oiW5rSb5b+F6L6+44CCXG4zLiDkuInop5LmnoHpmZDorrDkvY8gc2luYXh+YXjjgIF0YW5heH5heOOAgTEtY29zeH54wrIvMuOAglxuNC4g5bmC5oyH5Z6L57uf5LiA5YaZ5oiQIGVee+aMh+aVsMK3bG7lupXmlbB977yM5YWI5rGC5oyH5pWw5LiK55qE5p6B6ZmQ44CCXG41LiDmlbDliJfliIblvI/nnIvmnIDpq5jmrKHvvJvmjIfmlbDlnovlhYjmr5TovoPmnIDlpKflupXmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJp0YW7kuI5zaW7nmoTns7vmlbDmm7/mjaLkuI3nqLPjgIJcbumYsumUme+8mnRhbmF4fmF477yMc2luYnh+YnjvvIznu5PmnpxhL2LjgIIifSx7ImlkIjoiTS0wMDEtMjgiLCJ0aXRsZSI6Ik0tMDAxLTI4IOesrOS6jOmHjeimgeaegemZkCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi56ys5LqM6YeN6KaB5p6B6ZmQIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYIgbGltKHjihpLiiJ4pKDEtMi94KV54Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5rKh6K+G5YirYT0tMuOAgiIsImFuYWx5c2lzIjoiKDErYS94KV544oaSZV5h44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLnrKzkuozph43opoHmnoHpmZAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHnrKzkuozph43opoHmnoHpmZBcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5Yik5pat5p6B6ZmQ57G75Z6L77ya55u05o6l5Luj5YWl44CBMC8w44CB4oieL+KInuOAgeaXoOept+Wkp+mHj+OAgeW5guaMh+Wei+aIluaVsOWIl+Wei+OAglxuMi4gMC8wIOWei+S8mOWFiOiAg+iZkeetieS7t+aXoOept+Wwj+OAgeWboOW8j+WIhuino+OAgemAmuWIhuOAgeacieeQhuWMluaIlua0m+W/hei+vuOAglxuMy4g5LiJ6KeS5p6B6ZmQ6K6w5L2PIHNpbmF4fmF444CBdGFuYXh+YXjjgIExLWNvc3h+eMKyLzLjgIJcbjQuIOW5guaMh+Wei+e7n+S4gOWGmeaIkCBlXnvmjIfmlbDCt2xu5bqV5pWwfe+8jOWFiOaxguaMh+aVsOS4iueahOaegemZkOOAglxuNS4g5pWw5YiX5YiG5byP55yL5pyA6auY5qyh77yb5oyH5pWw5Z6L5YWI5q+U6L6D5pyA5aSn5bqV5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5rKh6K+G5YirYT0tMuOAglxu6Ziy6ZSZ77yaKDErYS94KV544oaSZV5h44CCIn0seyJpZCI6Ik0tMDAxLTI5IiwidGl0bGUiOiJNLTAwMS0yOSDmjIfmlbDmnoHpmZAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuaMh+aVsOaegemZkCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCIGxpbShu4oaS4oieKSg1XihuKzIpLTJebikvKDdebis1Xm4pIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5pyq5o+Q5Y+W5pyA5aSn5bqV5pWw5bmC5q+U6L6D44CCIiwiYW5hbHlzaXMiOiLmjIfmlbDlnovlhYjmr5TovoPmnIDlpKflupXmlbDjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuaMh+aVsOaegemZkCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeaMh+aVsOaegemZkFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjliKTmlq3mnoHpmZDnsbvlnovvvJrnm7TmjqXku6PlhaXjgIEwLzDjgIHiiJ4v4oie44CB5peg56m35aSn6YeP44CB5bmC5oyH5Z6L5oiW5pWw5YiX5Z6L44CCXG4yLiAwLzAg5Z6L5LyY5YWI6ICD6JmR562J5Lu35peg56m35bCP44CB5Zug5byP5YiG6Kej44CB6YCa5YiG44CB5pyJ55CG5YyW5oiW5rSb5b+F6L6+44CCXG4zLiDkuInop5LmnoHpmZDorrDkvY8gc2luYXh+YXjjgIF0YW5heH5heOOAgTEtY29zeH54wrIvMuOAglxuNC4g5bmC5oyH5Z6L57uf5LiA5YaZ5oiQIGVee+aMh+aVsMK3bG7lupXmlbB977yM5YWI5rGC5oyH5pWw5LiK55qE5p6B6ZmQ44CCXG41LiDmlbDliJfliIblvI/nnIvmnIDpq5jmrKHvvJvmjIfmlbDlnovlhYjmr5TovoPmnIDlpKflupXmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmnKrmj5Dlj5bmnIDlpKflupXmlbDluYLmr5TovoPjgIJcbumYsumUme+8muaMh+aVsOWei+WFiOavlOi+g+acgOWkp+W6leaVsOOAgiJ9LHsiaWQiOiJNLTAwMS0zMCIsInRpdGxlIjoiTS0wMDEtMzAg5LuL5YC85a6a55CGIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLku4vlgLzlrprnkIYiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iui/nue7reWHveaVsOS7i+WAvOWumueQhuivgeaYjuWKoOadg+W5s+Wdh+WAvOWtmOWcqCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuS4jeS8muaehOmAoOebruagh+WAvOiQveWcqOacgOWwj+acgOWkp+S5i+mXtOOAgiIsImFuYWx5c2lzIjoi6K+B5piO55uu5qCH5YC85LuL5LqObeWSjE3vvIzlho3nlKjku4vlgLzlrprnkIbjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuS7i+WAvOWumueQhiJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS7i+WAvOWumueQhlxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDov57nu63popjlhYjlhpnkuInku7bkuovvvJrlh73mlbDlgLzjgIHlt6bmnoHpmZDjgIHlj7PmnoHpmZDjgIJcbjIuIOWIhuauteeCueimgeWNleeLrOajgOafpe+8jOS4jeimgeWPqueci+S4pOS+p+ihqOi+vuW8j+OAglxuMy4g6Zu254K55a6a55CG5rWB56iL77ya6K6+5Ye95pWw44CB6K+B6L+e57ut44CB566X56uv54K544CB55yL5byC5Y+344CB5LiL57uT6K6644CCXG40LiDku4vlgLzlrprnkIbopoHlhYjor4HmmI7nm67moIflgLzlpLnlnKjmnIDlpKflgLzlkozmnIDlsI/lgLzkuYvpl7TjgIJcbjUuIOaVsOWIl+aegemZkOWtmOWcqOaAp+S8mOWFiOaDs+WIsOWNleiwg+acieeVjOWumueQhuOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muS4jeS8muaehOmAoOebruagh+WAvOiQveWcqOacgOWwj+acgOWkp+S5i+mXtOOAglxu6Ziy6ZSZ77ya6K+B5piO55uu5qCH5YC85LuL5LqObeWSjE3vvIzlho3nlKjku4vlgLzlrprnkIbjgIIifSx7ImlkIjoiTS0wMDEtMzEiLCJ0aXRsZSI6Ik0tMDAxLTMxIOmbtueCueWumueQhiIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi6Zu254K55a6a55CGIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLor4HmmI4geMKzLTJ4wrIteCsxPTAg5ZyoKDAsMSnlhoXoh7PlsJHmnInmoLkiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmsqHmnInlm7rlrprpm7bngrnlrprnkIbmtYHnqIvjgIIiLCJhbmFseXNpcyI6IuiuvuWHveaVsOOAgei/nue7reOAgeerr+eCueW8guWPt+OAgeS4i+e7k+iuuuOAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi6Zu254K55a6a55CGIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR6Zu254K55a6a55CGXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOiuviBGKHgpPXjCsy0yeMKyLXgrMeOAglxuMi4g5aSa6aG55byP5Ye95pWw5ZyoIFswLDFdIOS4iui/nue7reOAglxuMy4g6K6h566XIEYoMCk9Me+8jEYoMSk9MS0yLTErMT0tMeOAglxuNC4gRigwKcK3RigxKTww77yM56uv54K55byC5Y+344CCXG41LiDnlLHpm7bngrnlrprnkIbvvIzlrZjlnKggzr7iiIgoMCwxKe+8jOS9vyBGKM6+KT0w44CCXG7jgJDmraPnoa7nu5PorrrjgJHmlrnnqIvlnKggKDAsMSkg5YaF6Iez5bCR5pyJ5LiA5Liq5qC544CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muayoeacieWbuuWumumbtueCueWumueQhua1geeoi+OAglxu6Ziy6ZSZ77ya6K6+5Ye95pWw44CB6L+e57ut44CB56uv54K55byC5Y+344CB5LiL57uT6K6644CCIn0seyJpZCI6Ik0tMDAxLTMyIiwidGl0bGUiOiJNLTAwMS0zMiDmnoTpgKDlh73mlbAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuaehOmAoOWHveaVsCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoiZui/nue7reS4lGYoMCk9MCxmKDEpPTHvvIzor4HlrZjlnKjOvuS9v2Yozr4pPTEtzr4iLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLkuI3kvJrmiornrYnlvI/ovazmiJDpm7bngrnjgIIiLCJhbmFseXNpcyI6IuaehOmAoEYoeCk9Zih4KSt4LTHjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuaehOmAoOWHveaVsCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeaehOmAoOWHveaVsOivgeaYjumbtueCuVxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDmioogZijOvik9MS3OviDnp7vliLDlkIzkuIDovrnvvIzmnoTpgKAgRih4KT1mKHgpK3gtMeOAglxuMi4g5Zug5Li6IGYg6L+e57ut77yM5omA5LulIEYoeCkg5ZyoIFswLDFdIOS4iui/nue7reOAglxuMy4gRigwKT1mKDApLTE9LTHjgIJcbjQuIEYoMSk9ZigxKSsxLTE9MeOAglxuNS4gRigwKcK3RigxKTww77yM55Sx6Zu254K55a6a55CG5a2Y5ZyoIM6+4oiIKDAsMSnvvIzkvb8gRijOvik9MOOAglxu44CQ5q2j56Gu57uT6K6644CR5a2Y5ZyoIM6+77yM5L2/IGYozr4pPTEtzr7jgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LiN5Lya5oqK562J5byP6L2s5oiQ6Zu254K544CCXG7pmLLplJnvvJrmnoTpgKBGKHgpPWYoeCkreC0x44CCIn0seyJpZCI6Ik0tMDAxLTMzIiwidGl0bGUiOiJNLTAwMS0zMyDlpLnpgLwv5rGC5ZKM5p6B6ZmQIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlpLnpgLwv5rGC5ZKM5p6B6ZmQIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLor4HmmI7kuIDnsbvmsYLlkozmnoHpmZDnrYnkuo4xIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5LiN5Lya5pW05L2T5Lyw6K6h5rGC5ZKM6aG544CCIiwiYW5hbHlzaXMiOiLmib7kuIrkuIvnlYzvvIznlKjlpLnpgLzlrprnkIbjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWkuemAvC/msYLlkozmnoHpmZAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlpLnpgLwv5rGC5ZKM5p6B6ZmQXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOWIpOaWreaegemZkOexu+Wei++8muebtOaOpeS7o+WFpeOAgTAvMOOAgeKIni/iiJ7jgIHml6DnqbflpKfph4/jgIHluYLmjIflnovmiJbmlbDliJflnovjgIJcbjIuIDAvMCDlnovkvJjlhYjogIPomZHnrYnku7fml6DnqbflsI/jgIHlm6DlvI/liIbop6PjgIHpgJrliIbjgIHmnInnkIbljJbmiJbmtJvlv4Xovr7jgIJcbjMuIOS4ieinkuaegemZkOiusOS9jyBzaW5heH5heOOAgXRhbmF4fmF444CBMS1jb3N4fnjCsi8y44CCXG40LiDluYLmjIflnovnu5/kuIDlhpnmiJAgZV575oyH5pWwwrdsbuW6leaVsH3vvIzlhYjmsYLmjIfmlbDkuIrnmoTmnoHpmZDjgIJcbjUuIOaVsOWIl+WIhuW8j+eci+acgOmrmOasoe+8m+aMh+aVsOWei+WFiOavlOi+g+acgOWkp+W6leaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muS4jeS8muaVtOS9k+S8sOiuoeaxguWSjOmhueOAglxu6Ziy6ZSZ77ya5om+5LiK5LiL55WM77yM55So5aS56YC85a6a55CG44CCIn0seyJpZCI6Ik0tMDAxLTM0IiwidGl0bGUiOiJNLTAwMS0zNCDljZXosIPmnInnlYwiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWNleiwg+acieeVjCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi6K+B5piO5bWM5aWX5qC55byP5pWw5YiX5p6B6ZmQ5a2Y5ZyoIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5LiN55+l6YGT6K+B5piO5a2Y5Zyo5bi455So5Y2V6LCD5pyJ55WM44CCIiwiYW5hbHlzaXMiOiLor4HmmI7ljZXosIPpgJLlop7kuJTmnInkuIrnlYzjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWNleiwg+acieeVjCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWNleiwg+acieeVjFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjliKTmlq3mnoHpmZDnsbvlnovvvJrnm7TmjqXku6PlhaXjgIEwLzDjgIHiiJ4v4oie44CB5peg56m35aSn6YeP44CB5bmC5oyH5Z6L5oiW5pWw5YiX5Z6L44CCXG4yLiAwLzAg5Z6L5LyY5YWI6ICD6JmR562J5Lu35peg56m35bCP44CB5Zug5byP5YiG6Kej44CB6YCa5YiG44CB5pyJ55CG5YyW5oiW5rSb5b+F6L6+44CCXG4zLiDkuInop5LmnoHpmZDorrDkvY8gc2luYXh+YXjjgIF0YW5heH5heOOAgTEtY29zeH54wrIvMuOAglxuNC4g5bmC5oyH5Z6L57uf5LiA5YaZ5oiQIGVee+aMh+aVsMK3bG7lupXmlbB977yM5YWI5rGC5oyH5pWw5LiK55qE5p6B6ZmQ44CCXG41LiDmlbDliJfliIblvI/nnIvmnIDpq5jmrKHvvJvmjIfmlbDlnovlhYjmr5TovoPmnIDlpKflupXmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrkuI3nn6XpgZPor4HmmI7lrZjlnKjluLjnlKjljZXosIPmnInnlYzjgIJcbumYsumUme+8muivgeaYjuWNleiwg+mAkuWinuS4lOacieS4iueVjOOAgiJ9LHsiaWQiOiJNLTAwMS0zNSIsInRpdGxlIjoiTS0wMDEtMzUg5a+85pWw5a6a5LmJIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlr7zmlbDlrprkuYkiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuiuvmYoeCk94oiaeO+8jOaMieWumuS5ieaxgmbigLIoNCkiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLlr7zmlbDlrprkuYnkuI7moLnlvI/mnInnkIbljJbkuI3nhp/jgIIiLCJhbmFseXNpcyI6IuWGmeW3ruWVhu+8jOKImngtMuimgeacieeQhuWMluOAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi5a+85pWw5a6a5LmJIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5a+85pWw5a6a5LmJXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWmguaenOiAg+WvvOaVsOWumuS5ie+8jOWGmeWHuiBsaW0oaOKGkjApW2YoeDAraCktZih4MCldL2jjgIJcbjIuIOWQq+agueW8j+WFiOacieeQhuWMlu+8jOWQq+e7neWvueWAvOaIluWIhuauteimgeWIhuW3puWPs+aegemZkOOAglxuMy4g5YiG5q6154K55Y+v5a+85b+F6aG75YWI6L+e57ut77yM5YaN5q+U6L6D5bem5a+85pWw5ZKM5Y+z5a+85pWw44CCXG40LiDmsYLlj4LmlbDpopjpgJrluLjlhYjnlLHov57nu63mgKfmsYLkuIDkuKrlj4LmlbDvvIzlho3nlLHlt6blj7Plr7zmlbDnm7jnrYnmsYLlj6bkuIDkuKrlj4LmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlr7zmlbDlrprkuYnkuI7moLnlvI/mnInnkIbljJbkuI3nhp/jgIJcbumYsumUme+8muWGmeW3ruWVhu+8jOKImngtMuimgeacieeQhuWMluOAgiJ9LHsiaWQiOiJNLTAwMS0zNiIsInRpdGxlIjoiTS0wMDEtMzYg5YiG5q615Y+v5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLliIbmrrXlj6/lr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIhuauteWHveaVsGxuKDErMngpL3NpbjJ45ZyoMOWkhOaYr+WQpuWPr+WvvCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWPqueci+i/nue7re+8jOacquavlOi+g+W3puWPs+WvvOaVsOOAgiIsImFuYWx5c2lzIjoi5Y+v5a+85YWI6L+e57ut77yM5YaN5bem5Y+z5a+85pWw55u4562J44CCIiwidGFncyI6WyJNLTAwMSIsIuWHveaVsOOAgeWumuS5ieWfn+OAgeWPjeWHveaVsOOAgeaegemZkOWfuuehgCg0MemimCkiLCLliIbmrrXlj6/lr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHliIbmrrXlj6/lr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5aaC5p6c6ICD5a+85pWw5a6a5LmJ77yM5YaZ5Ye6IGxpbSho4oaSMClbZih4MCtoKS1mKHgwKV0vaOOAglxuMi4g5ZCr5qC55byP5YWI5pyJ55CG5YyW77yM5ZCr57ud5a+55YC85oiW5YiG5q616KaB5YiG5bem5Y+z5p6B6ZmQ44CCXG4zLiDliIbmrrXngrnlj6/lr7zlv4XpobvlhYjov57nu63vvIzlho3mr5TovoPlt6blr7zmlbDlkozlj7Plr7zmlbDjgIJcbjQuIOaxguWPguaVsOmimOmAmuW4uOWFiOeUsei/nue7reaAp+axguS4gOS4quWPguaVsO+8jOWGjeeUseW3puWPs+WvvOaVsOebuOetieaxguWPpuS4gOS4quWPguaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muWPqueci+i/nue7re+8jOacquavlOi+g+W3puWPs+WvvOaVsOOAglxu6Ziy6ZSZ77ya5Y+v5a+85YWI6L+e57ut77yM5YaN5bem5Y+z5a+85pWw55u4562J44CCIn0seyJpZCI6Ik0tMDAxLTM3IiwidGl0bGUiOiJNLTAwMS0zNyDlj4LmlbDlj6/lr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWPguaVsOWPr+WvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi56Gu5a6aYSxi5L2/5YiG5q615Ye95pWwY29zeC9heCti5ZyoMOWkhOWPr+WvvCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuacquWIhui/nue7reS4juW3puWPs+WvvOaVsOS4pOatpeOAgiIsImFuYWx5c2lzIjoi5YWI6L+e57ut5rGCYu+8jOWGjeW3puWPs+WvvOaVsOebuOetieaxgmHjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWPguaVsOWPr+WvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWPguaVsOWPr+WvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlpoLmnpzogIPlr7zmlbDlrprkuYnvvIzlhpnlh7ogbGltKGjihpIwKVtmKHgwK2gpLWYoeDApXS9o44CCXG4yLiDlkKvmoLnlvI/lhYjmnInnkIbljJbvvIzlkKvnu53lr7nlgLzmiJbliIbmrrXopoHliIblt6blj7PmnoHpmZDjgIJcbjMuIOWIhuauteeCueWPr+WvvOW/hemhu+WFiOi/nue7re+8jOWGjeavlOi+g+W3puWvvOaVsOWSjOWPs+WvvOaVsOOAglxuNC4g5rGC5Y+C5pWw6aKY6YCa5bi45YWI55Sx6L+e57ut5oCn5rGC5LiA5Liq5Y+C5pWw77yM5YaN55Sx5bem5Y+z5a+85pWw55u4562J5rGC5Y+m5LiA5Liq5Y+C5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5pyq5YiG6L+e57ut5LiO5bem5Y+z5a+85pWw5Lik5q2l44CCXG7pmLLplJnvvJrlhYjov57nu63msYJi77yM5YaN5bem5Y+z5a+85pWw55u4562J5rGCYeOAgiJ9LHsiaWQiOiJNLTAwMS0zOCIsInRpdGxlIjoiTS0wMDEtMzgg5YiH57q/5rOV57q/Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLliIfnur/ms5Xnur8iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9bG4oMSt4KeWcqCgwLDAp5aSE5YiH57q/5LiO5rOV57q/Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5LiN5riF5qWa5YiH57q/5pac546H5LiO5rOV57q/6LSf5YCS5pWw44CCIiwiYW5hbHlzaXMiOiLliIfnur/mlpznjoc9ZuKAsih4MCnvvIzms5Xnur/mlpznjoc9LTEva+OAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi5YiH57q/5rOV57q/Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5YiH57q/5rOV57q/XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOehruWumuWIh+eCue+8m+mimOebruivtOKAnOi/h+afkOeCueKAneaXtu+8jOi/meS4queCueS4jeS4gOWumuaYr+WIh+eCueOAglxuMi4g55So5a+85pWw5rGC5YiH57q/5pac546HIGs9ZicoeDAp44CCXG4zLiDliIfnur/mlrnnqIvlhpkgeS15MD1rKHgteDAp44CCXG40LiDms5Xnur/mlpznjofmmK8gLTEva++8m+iLpSBrPTAg5oiW5LiN5a2Y5Zyo77yM6KaB5Y2V54us6K6o6K665rC05bmzL+erluebtOaDheWGteOAglxuNS4g5Lik5puy57q/55u45YiH6KaB5ZCM5pe25ruh6Laz5Ye95pWw5YC855u4562J5ZKM5a+85pWw5YC855u4562J44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LiN5riF5qWa5YiH57q/5pac546H5LiO5rOV57q/6LSf5YCS5pWw44CCXG7pmLLplJnvvJrliIfnur/mlpznjoc9ZuKAsih4MCnvvIzms5Xnur/mlpznjoc9LTEva+OAgiJ9LHsiaWQiOiJNLTAwMS0zOSIsInRpdGxlIjoiTS0wMDEtMzkg6L+H5a6a54K55YiH57q/Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLov4flrprngrnliIfnur8iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9ZV546L+HKDAsMCnnmoTliIfnur/mlrnnqIsiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmiornu5nlrprngrnlvZPliIfngrnjgIIiLCJhbmFseXNpcyI6Iui/h+eCueKJoOWIh+eCue+8jOWPpuiuvuWIh+eCueOAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi6L+H5a6a54K55YiH57q/Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR6L+H5a6a54K55YiH57q/XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOiuvuWIh+eCueS4uiAoYSxlXmEp77yM5LiN6KaB5oqK57uZ5a6a54K5ICgwLDApIOW9k+WIh+eCueOAglxuMi4geT1lXngg5Zyo5YiH54K55aSE5pac546H5Li6IGVeYeOAglxuMy4g5YiH57q/5pa556iL77yaeS1lXmE9ZV5hKHgtYSnjgIJcbjQuIOS7o+WFpei/h+eCuSAoMCwwKe+8mjAtZV5hPWVeYSgwLWEp77yM5b6XIC0xPS1h77yM5omA5LulIGE9MeOAglxuNS4g5Luj5Zue5b6X5YiH57q/IHk9ZSh4LTEpK2U9ZXjjgIJcbuOAkOato+ehruetlOahiOOAkXk9ZXjjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5oqK57uZ5a6a54K55b2T5YiH54K544CCXG7pmLLplJnvvJrov4fngrniiaDliIfngrnvvIzlj6borr7liIfngrnjgIIifSx7ImlkIjoiTS0wMDEtNDAiLCJ0aXRsZSI6Ik0tMDAxLTQwIOebuOWIhyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi55u45YiHIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJ5PWHiiJp4IOS4jiB5PWxueCDnm7jliIfvvIzmsYJhIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi55u45YiH5p2h5Lu25ryP55So5a+85pWw55u4562J44CCIiwiYW5hbHlzaXMiOiLnm7jliIc95YWx54K5K+WFseaWnOeOh+OAgiIsInRhZ3MiOlsiTS0wMDEiLCLlh73mlbDjgIHlrprkuYnln5/jgIHlj43lh73mlbDjgIHmnoHpmZDln7rnoYAoNDHpopgpIiwi55u45YiHIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Lik5puy57q/55u45YiH5rGC5Y+C5pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOiuvuWIh+eCueaoquWdkOagh+S4uiB44oKAPjDjgIJcbjIuIOWHveaVsOWAvOebuOetie+8mmHiiJp44oKAPWxueOKCgOOAglxuMy4g5a+85pWw55u4562J77yaYS8oMuKImnjigoApPTEveOKCgOOAglxuNC4g55Sx5a+85pWw55u4562J5b6XIGE9Mi/iiJp44oKA44CCXG41LiDku6PlhaXlh73mlbDlgLznm7jnrYnvvJoyPWxueOKCgO+8jOaJgOS7pSB44oKAPWXCsuOAglxuNi4gYT0yL2XjgIJcbuOAkOato+ehruetlOahiOOAkWE9Mi9l44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muebuOWIh+adoeS7tua8j+eUqOWvvOaVsOebuOetieOAglxu6Ziy6ZSZ77ya55u45YiHPeWFseeCuSvlhbHmlpznjofjgIIifSx7ImlkIjoiTS0wMDEtNDEiLCJ0aXRsZSI6Ik0tMDAxLTQxIOWVhueahOaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5ZWG55qE5rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLlt7Lnn6UgZih4KT0oMngrc2lueCkvKDErY29zeCnvvIzmsYJm4oCyKDApIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5ZWG55qE5rGC5a+85YWs5byP5LiN54af44CCIiwiYW5hbHlzaXMiOiIodS92KeKAmT0odeKAmXYtdXbigJkpL3bCsuOAgiDkuozliLfpobrluo/vvJrlhYjliLfov57nu63kuInmnaHku7bihpLpl7Tmlq3ngrnliIbnsbvihpLlr7zmlbDlrprkuYnihpLlj6/lr7zov57nu63lhbPns7vjgIIiLCJ0YWdzIjpbIk0tMDAxIiwi5Ye95pWw44CB5a6a5LmJ5Z+f44CB5Y+N5Ye95pWw44CB5p6B6ZmQ5Z+656GAKDQx6aKYKSIsIuWVhueahOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWVhueahOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDorr4gdT0yeCtzaW5477yMdj0xK2Nvc3jjgIJcbjIuIHUnPTIrY29zeO+8jHYnPS1zaW5444CCXG4zLiBmJyh4KT0odSd2LXV2JykvdsKy44CCXG40LiDku6MgeD0w77yadSgwKT0w77yMdigwKT0y77yMdScoMCk9M++8jHYnKDApPTDjgIJcbjUuIGYnKDApPSgzwrcyLTDCtzApLzLCsj02LzQ9My8y44CCXG7jgJDmraPnoa7nrZTmoYjjgJFmJygwKT0zLzLjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5ZWG55qE5rGC5a+85YWs5byP5LiN54af44CCXG7pmLLplJnvvJoodS92KeKAmT0odeKAmXYtdXbigJkpL3bCsuOAgiDkuozliLfpobrluo/vvJrlhYjliLfov57nu63kuInmnaHku7bihpLpl7Tmlq3ngrnliIbnsbvihpLlr7zmlbDlrprkuYnihpLlj6/lr7zov57nu63lhbPns7vjgIIifSx7ImlkIjoiTS0wMDItMDEiLCJ0aXRsZSI6Ik0tMDAyLTAxIOWvvOaVsOWumuS5iSIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5a+85pWw5a6a5LmJIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJmKHgpPXjCsuWcqHg9MeWkhOeahOWvvOaVsGbigLIoMSkiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLkuI3kvJrmraPnoa7ku6PlhaVmKDEraCktZigxKeOAgiIsImFuYWx5c2lzIjoiZuKAsihhKT1saW1baOKGkjBdKGYoYStoKS1mKGEpKS9o44CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLlr7zmlbDlrprkuYkiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlr7zmlbDlrprkuYlcbuOAkOino+mimOatpemqpOOAkVxuMS4g5aaC5p6c6ICD5a+85pWw5a6a5LmJ77yM5YaZ5Ye6IGxpbSho4oaSMClbZih4MCtoKS1mKHgwKV0vaOOAglxuMi4g5ZCr5qC55byP5YWI5pyJ55CG5YyW77yM5ZCr57ud5a+55YC85oiW5YiG5q616KaB5YiG5bem5Y+z5p6B6ZmQ44CCXG4zLiDliIbmrrXngrnlj6/lr7zlv4XpobvlhYjov57nu63vvIzlho3mr5TovoPlt6blr7zmlbDlkozlj7Plr7zmlbDjgIJcbjQuIOaxguWPguaVsOmimOmAmuW4uOWFiOeUsei/nue7reaAp+axguS4gOS4quWPguaVsO+8jOWGjeeUseW3puWPs+WvvOaVsOebuOetieaxguWPpuS4gOS4quWPguaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muS4jeS8muato+ehruS7o+WFpWYoMStoKS1mKDEp44CCXG7pmLLplJnvvJpm4oCyKGEpPWxpbVto4oaSMF0oZihhK2gpLWYoYSkpL2jjgIIifSx7ImlkIjoiTS0wMDItMDIiLCJ0aXRsZSI6Ik0tMDAyLTAyIOWvvOaVsOWumuS5ieWPmOW9oiIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5a+85pWw5a6a5LmJ5Y+Y5b2iIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLlt7Lnn6Vm5ZyoeDDlj6/lr7zvvIzmsYIgzpR4L1tmKHgwKzPOlHgpLWYoeDApXSDmnoHpmZAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmnKrmioozzpR45p6E6YCg5oiQ5a+85pWw5a6a5LmJ44CCIiwiYW5hbHlzaXMiOiLliIbmr43iiYgzzpR4IGbigLIoeDAp77yM57uT5p6cMS9bM2bigLIoeDApXeOAgiIsInRhZ3MiOlsiTS0wMDIiLCLov57nu63jgIHpl7Tmlq3jgIHlr7zmlbDlrprkuYnjgIHlj6/lr7zmgKcoMjXpopgpIiwi5a+85pWw5a6a5LmJ5Y+Y5b2iIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5a+85pWw5a6a5LmJ5Y+Y5b2iXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOWIpOaWreaegemZkOexu+Wei++8muebtOaOpeS7o+WFpeOAgTAvMOOAgeKIni/iiJ7jgIHml6DnqbflpKfph4/jgIHluYLmjIflnovmiJbmlbDliJflnovjgIJcbjIuIDAvMCDlnovkvJjlhYjogIPomZHnrYnku7fml6DnqbflsI/jgIHlm6DlvI/liIbop6PjgIHpgJrliIbjgIHmnInnkIbljJbmiJbmtJvlv4Xovr7jgIJcbjMuIOS4ieinkuaegemZkOiusOS9jyBzaW5heH5heOOAgXRhbmF4fmF444CBMS1jb3N4fnjCsi8y44CCXG40LiDluYLmjIflnovnu5/kuIDlhpnmiJAgZV575oyH5pWwwrdsbuW6leaVsH3vvIzlhYjmsYLmjIfmlbDkuIrnmoTmnoHpmZDjgIJcbjUuIOaVsOWIl+WIhuW8j+eci+acgOmrmOasoe+8m+aMh+aVsOWei+WFiOavlOi+g+acgOWkp+W6leaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muacquaKijPOlHjmnoTpgKDmiJDlr7zmlbDlrprkuYnjgIJcbumYsumUme+8muWIhuavjeKJiDPOlHggZuKAsih4MCnvvIznu5PmnpwxL1szZuKAsih4MCld44CCIn0seyJpZCI6Ik0tMDAyLTAzIiwidGl0bGUiOiJNLTAwMi0wMyDlr7zmlbDlrprkuYkv5LmY56evIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlr7zmlbDlrprkuYkv5LmY56evIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJmKHgpPXgoeCsxKeKApih4KzIwMjQp77yM5rGCZuKAsigwKSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuacquWIqeeUqGYoMCk9MOWSjOWboOWtkHjnuqbliIbjgIIiLCJhbmFseXNpcyI6ImbigLIoMCk9bGltW3jihpIwXWYoeCkveOOAgiIsInRhZ3MiOlsiTS0wMDIiLCLov57nu63jgIHpl7Tmlq3jgIHlr7zmlbDlrprkuYnjgIHlj6/lr7zmgKcoMjXpopgpIiwi5a+85pWw5a6a5LmJL+S5mOenryJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWvvOaVsOWumuS5iS/kuZjnp69cbuOAkOino+mimOatpemqpOOAkVxuMS4g5aaC5p6c6ICD5a+85pWw5a6a5LmJ77yM5YaZ5Ye6IGxpbSho4oaSMClbZih4MCtoKS1mKHgwKV0vaOOAglxuMi4g5ZCr5qC55byP5YWI5pyJ55CG5YyW77yM5ZCr57ud5a+55YC85oiW5YiG5q616KaB5YiG5bem5Y+z5p6B6ZmQ44CCXG4zLiDliIbmrrXngrnlj6/lr7zlv4XpobvlhYjov57nu63vvIzlho3mr5TovoPlt6blr7zmlbDlkozlj7Plr7zmlbDjgIJcbjQuIOaxguWPguaVsOmimOmAmuW4uOWFiOeUsei/nue7reaAp+axguS4gOS4quWPguaVsO+8jOWGjeeUseW3puWPs+WvvOaVsOebuOetieaxguWPpuS4gOS4quWPguaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muacquWIqeeUqGYoMCk9MOWSjOWboOWtkHjnuqbliIbjgIJcbumYsumUme+8mmbigLIoMCk9bGltW3jihpIwXWYoeCkveOOAgiJ9LHsiaWQiOiJNLTAwMi0wNCIsInRpdGxlIjoiTS0wMDItMDQg5YiG5q615bem5Y+z5a+85pWwIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLliIbmrrXlt6blj7Plr7zmlbAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIhuauteWHveaVsCgyLzMpeMKz5LiOeMKy5ZyoeD0x5aSE5bem5Y+z5a+85pWw5Yik5patIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5YiG55WM54K55Ye95pWw5YC85Y+W6ZSZ44CCIiwiYW5hbHlzaXMiOiLlhYjmsYJmKOWIhueVjOeCuSnvvIzlho3nrpflt6blj7Plr7zmlbDjgIIiLCJ0YWdzIjpbIk0tMDAyIiwi6L+e57ut44CB6Ze05pat44CB5a+85pWw5a6a5LmJ44CB5Y+v5a+85oCnKDI16aKYKSIsIuWIhuauteW3puWPs+WvvOaVsCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWIhuauteW3puWPs+WvvOaVsFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlpoLmnpzogIPlr7zmlbDlrprkuYnvvIzlhpnlh7ogbGltKGjihpIwKVtmKHgwK2gpLWYoeDApXS9o44CCXG4yLiDlkKvmoLnlvI/lhYjmnInnkIbljJbvvIzlkKvnu53lr7nlgLzmiJbliIbmrrXopoHliIblt6blj7PmnoHpmZDjgIJcbjMuIOWIhuauteeCueWPr+WvvOW/hemhu+WFiOi/nue7re+8jOWGjeavlOi+g+W3puWvvOaVsOWSjOWPs+WvvOaVsOOAglxuNC4g5rGC5Y+C5pWw6aKY6YCa5bi45YWI55Sx6L+e57ut5oCn5rGC5LiA5Liq5Y+C5pWw77yM5YaN55Sx5bem5Y+z5a+85pWw55u4562J5rGC5Y+m5LiA5Liq5Y+C5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5YiG55WM54K55Ye95pWw5YC85Y+W6ZSZ44CCXG7pmLLplJnvvJrlhYjmsYJmKOWIhueVjOeCuSnvvIzlho3nrpflt6blj7Plr7zmlbDjgIIifSx7ImlkIjoiTS0wMDItMDUiLCJ0aXRsZSI6Ik0tMDAyLTA1IG1pbi9tYXjlm77lg48iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6Im1pbi9tYXjlm77lg48iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6ImYoeCk9bWlue3gseMKyfeWcqOWFqOWunuaVsOS4jeWPr+WvvOeCueS4quaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuayoeaDs+WIsOeUu+WbvuavlOi+g+S4pOWHveaVsOOAgiIsImFuYWx5c2lzIjoibWluL21heOWFiOeUu+WbvuaJvuS6pOeCue+8jOWGjeWIhuauteOAgiIsInRhZ3MiOlsiTS0wMDIiLCLov57nu63jgIHpl7Tmlq3jgIHlr7zmlbDlrprkuYnjgIHlj6/lr7zmgKcoMjXpopgpIiwibWluL21heOWbvuWDjyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkW1pbi9tYXjlm77lg49cbuOAkOino+mimOatpemqpOOAkVxuMS4g5aaC5p6c6ICD5a+85pWw5a6a5LmJ77yM5YaZ5Ye6IGxpbSho4oaSMClbZih4MCtoKS1mKHgwKV0vaOOAglxuMi4g5ZCr5qC55byP5YWI5pyJ55CG5YyW77yM5ZCr57ud5a+55YC85oiW5YiG5q616KaB5YiG5bem5Y+z5p6B6ZmQ44CCXG4zLiDliIbmrrXngrnlj6/lr7zlv4XpobvlhYjov57nu63vvIzlho3mr5TovoPlt6blr7zmlbDlkozlj7Plr7zmlbDjgIJcbjQuIOaxguWPguaVsOmimOmAmuW4uOWFiOeUsei/nue7reaAp+axguS4gOS4quWPguaVsO+8jOWGjeeUseW3puWPs+WvvOaVsOebuOetieaxguWPpuS4gOS4quWPguaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muayoeaDs+WIsOeUu+WbvuavlOi+g+S4pOWHveaVsOOAglxu6Ziy6ZSZ77yabWluL21heOWFiOeUu+WbvuaJvuS6pOeCue+8jOWGjeWIhuauteOAgiJ9LHsiaWQiOiJNLTAwMi0wNiIsInRpdGxlIjoiTS0wMDItMDYg6L+e57ut5Y+v5a+85Y+v5b6uIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLov57nu63lj6/lr7zlj6/lvq4iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6InNpbjJ4K3jCsmNvcygxL3gp5YiG5q615Ye95pWw5ZyoMOWkhOaAp+i0qOWIpOaWrSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuingWNvcygxL3gp6K+v5Yik5LiN5Y+v5a+844CCIiwiYW5hbHlzaXMiOiLnlKjlrprkuYnliKTmlq3vvIx4wrJjb3MoMS94Keiiq+WkuemAvOOAgiIsInRhZ3MiOlsiTS0wMDIiLCLov57nu63jgIHpl7Tmlq3jgIHlr7zmlbDlrprkuYnjgIHlj6/lr7zmgKcoMjXpopgpIiwi6L+e57ut5Y+v5a+85Y+v5b6uIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR6L+e57ut5Y+v5a+85Y+v5b6uXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOi/nue7remimOWFiOWGmeS4ieS7tuS6i++8muWHveaVsOWAvOOAgeW3puaegemZkOOAgeWPs+aegemZkOOAglxuMi4g5YiG5q6154K56KaB5Y2V54us5qOA5p+l77yM5LiN6KaB5Y+q55yL5Lik5L6n6KGo6L6+5byP44CCXG4zLiDpm7bngrnlrprnkIbmtYHnqIvvvJrorr7lh73mlbDjgIHor4Hov57nu63jgIHnrpfnq6/ngrnjgIHnnIvlvILlj7fjgIHkuIvnu5PorrrjgIJcbjQuIOS7i+WAvOWumueQhuimgeWFiOivgeaYjuebruagh+WAvOWkueWcqOacgOWkp+WAvOWSjOacgOWwj+WAvOS5i+mXtOOAglxuNS4g5pWw5YiX5p6B6ZmQ5a2Y5Zyo5oCn5LyY5YWI5oOz5Yiw5Y2V6LCD5pyJ55WM5a6a55CG44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya6KeBY29zKDEveCnor6/liKTkuI3lj6/lr7zjgIJcbumYsumUme+8mueUqOWumuS5ieWIpOaWre+8jHjCsmNvcygxL3gp6KKr5aS56YC844CCIn0seyJpZCI6Ik0tMDAyLTA3IiwidGl0bGUiOiJNLTAwMi0wNyDmoLnlvI/mnoHpmZAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuagueW8j+aegemZkCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoibGltKHjihpIxKVviiJooNHgpLTJdL1syLeKImig1LXgpXSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuacieeQhuWMluS4jeWujOaVtOOAgiIsImFuYWx5c2lzIjoiMC8w5qC55byP5p6B6ZmQ5YiG5a2Q5YiG5q+N5ZCM5pe25pyJ55CG5YyW44CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLmoLnlvI/mnoHpmZAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHmoLnlvI/mnoHpmZBcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5Yik5pat5p6B6ZmQ57G75Z6L77ya55u05o6l5Luj5YWl44CBMC8w44CB4oieL+KInuOAgeaXoOept+Wkp+mHj+OAgeW5guaMh+Wei+aIluaVsOWIl+Wei+OAglxuMi4gMC8wIOWei+S8mOWFiOiAg+iZkeetieS7t+aXoOept+Wwj+OAgeWboOW8j+WIhuino+OAgemAmuWIhuOAgeacieeQhuWMluaIlua0m+W/hei+vuOAglxuMy4g5LiJ6KeS5p6B6ZmQ6K6w5L2PIHNpbmF4fmF444CBdGFuYXh+YXjjgIExLWNvc3h+eMKyLzLjgIJcbjQuIOW5guaMh+Wei+e7n+S4gOWGmeaIkCBlXnvmjIfmlbDCt2xu5bqV5pWwfe+8jOWFiOaxguaMh+aVsOS4iueahOaegemZkOOAglxuNS4g5pWw5YiX5YiG5byP55yL5pyA6auY5qyh77yb5oyH5pWw5Z6L5YWI5q+U6L6D5pyA5aSn5bqV5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5pyJ55CG5YyW5LiN5a6M5pW044CCXG7pmLLplJnvvJowLzDmoLnlvI/mnoHpmZDliIblrZDliIbmr43lkIzml7bmnInnkIbljJbjgIIifSx7ImlkIjoiTS0wMDItMDgiLCJ0aXRsZSI6Ik0tMDAyLTA4IOesrOS6jOmHjeimgeaegemZkCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi56ys5LqM6YeN6KaB5p6B6ZmQIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLnrKzkuozph43opoHmnoHpmZDlnovpopgo6aKY6Z2i5pu+5LiN5riFKSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuW6leaVsOacquWMluaIkDErdeW9ouW8j+OAgiIsImFuYWx5c2lzIjoi5YWI5YyW5Li6KDErdSleezEvdX3nm7jlhbPlvaLlvI/jgIIiLCJ0YWdzIjpbIk0tMDAyIiwi6L+e57ut44CB6Ze05pat44CB5a+85pWw5a6a5LmJ44CB5Y+v5a+85oCnKDI16aKYKSIsIuesrOS6jOmHjeimgeaegemZkCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOmcgOihpeWujOaVtOWOn+mimOOAkeW9k+WJjemimOW5sue8uuWwkeWFt+S9k+eCueOAgeWPguaVsOWAvOaIluWujOaVtOihqOi+vuW8j++8m+WFiOaMieS4i+mdoua1geeoi+WBmu+8jOihpem9kOWOn+mimOWQjuWGjeS7o+WFpeacgOWQjuS4gOatpeOAglxu44CQ6ICD54K544CR56ys5LqM6YeN6KaB5p6B6ZmQXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOWIpOaWreaegemZkOexu+Wei++8muebtOaOpeS7o+WFpeOAgTAvMOOAgeKIni/iiJ7jgIHml6DnqbflpKfph4/jgIHluYLmjIflnovmiJbmlbDliJflnovjgIJcbjIuIDAvMCDlnovkvJjlhYjogIPomZHnrYnku7fml6DnqbflsI/jgIHlm6DlvI/liIbop6PjgIHpgJrliIbjgIHmnInnkIbljJbmiJbmtJvlv4Xovr7jgIJcbjMuIOS4ieinkuaegemZkOiusOS9jyBzaW5heH5heOOAgXRhbmF4fmF444CBMS1jb3N4fnjCsi8y44CCXG40LiDluYLmjIflnovnu5/kuIDlhpnmiJAgZV575oyH5pWwwrdsbuW6leaVsH3vvIzlhYjmsYLmjIfmlbDkuIrnmoTmnoHpmZDjgIJcbjUuIOaVsOWIl+WIhuW8j+eci+acgOmrmOasoe+8m+aMh+aVsOWei+WFiOavlOi+g+acgOWkp+W6leaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muW6leaVsOacquWMluaIkDErdeW9ouW8j+OAglxu6Ziy6ZSZ77ya5YWI5YyW5Li6KDErdSleezEvdX3nm7jlhbPlvaLlvI/jgIIifSx7ImlkIjoiTS0wMDItMDkiLCJ0aXRsZSI6Ik0tMDAyLTA5IOetieS7t+aXoOept+WwjyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi562J5Lu35peg56m35bCPIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJsaW0oeOKGkjApMS94wrLCt3NpbsKyKHgv4oiaNSkiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiJzaW4oeC/iiJo1KeetieS7t+abv+aNouezu+aVsOmUmeOAgiIsImFuYWx5c2lzIjoic2luKHgv4oiaNSl+eC/iiJo177yM57uT5p6cMS8144CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLnrYnku7fml6DnqbflsI8iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHnrYnku7fml6DnqbflsI9cbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5Yik5pat5p6B6ZmQ57G75Z6L77ya55u05o6l5Luj5YWl44CBMC8w44CB4oieL+KInuOAgeaXoOept+Wkp+mHj+OAgeW5guaMh+Wei+aIluaVsOWIl+Wei+OAglxuMi4gMC8wIOWei+S8mOWFiOiAg+iZkeetieS7t+aXoOept+Wwj+OAgeWboOW8j+WIhuino+OAgemAmuWIhuOAgeacieeQhuWMluaIlua0m+W/hei+vuOAglxuMy4g5LiJ6KeS5p6B6ZmQ6K6w5L2PIHNpbmF4fmF444CBdGFuYXh+YXjjgIExLWNvc3h+eMKyLzLjgIJcbjQuIOW5guaMh+Wei+e7n+S4gOWGmeaIkCBlXnvmjIfmlbDCt2xu5bqV5pWwfe+8jOWFiOaxguaMh+aVsOS4iueahOaegemZkOOAglxuNS4g5pWw5YiX5YiG5byP55yL5pyA6auY5qyh77yb5oyH5pWw5Z6L5YWI5q+U6L6D5pyA5aSn5bqV5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77yac2luKHgv4oiaNSnnrYnku7fmm7/mjaLns7vmlbDplJnjgIJcbumYsumUme+8mnNpbih4L+KImjUpfngv4oiaNe+8jOe7k+aenDEvNeOAgiJ9LHsiaWQiOiJNLTAwMi0xMCIsInRpdGxlIjoiTS0wMDItMTAg5aS56YC8K+mHjeimgeaegemZkCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5aS56YC8K+mHjeimgeaegemZkCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoibGltKHjihpIwKVt4c2luKDEveCkrKDEveClzaW54XSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuayoeacieWIhuS4pOmDqOWIhuWkhOeQhuOAgiIsImFuYWx5c2lzIjoieHNpbigxL3gp4oaSMO+8jHNpbngveOKGkjHjgIIiLCJ0YWdzIjpbIk0tMDAyIiwi6L+e57ut44CB6Ze05pat44CB5a+85pWw5a6a5LmJ44CB5Y+v5a+85oCnKDI16aKYKSIsIuWkuemAvCvph43opoHmnoHpmZAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlpLnpgLwr6YeN6KaB5p6B6ZmQXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOWIpOaWreaegemZkOexu+Wei++8muebtOaOpeS7o+WFpeOAgTAvMOOAgeKIni/iiJ7jgIHml6DnqbflpKfph4/jgIHluYLmjIflnovmiJbmlbDliJflnovjgIJcbjIuIDAvMCDlnovkvJjlhYjogIPomZHnrYnku7fml6DnqbflsI/jgIHlm6DlvI/liIbop6PjgIHpgJrliIbjgIHmnInnkIbljJbmiJbmtJvlv4Xovr7jgIJcbjMuIOS4ieinkuaegemZkOiusOS9jyBzaW5heH5heOOAgXRhbmF4fmF444CBMS1jb3N4fnjCsi8y44CCXG40LiDluYLmjIflnovnu5/kuIDlhpnmiJAgZV575oyH5pWwwrdsbuW6leaVsH3vvIzlhYjmsYLmjIfmlbDkuIrnmoTmnoHpmZDjgIJcbjUuIOaVsOWIl+WIhuW8j+eci+acgOmrmOasoe+8m+aMh+aVsOWei+WFiOavlOi+g+acgOWkp+W6leaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muayoeacieWIhuS4pOmDqOWIhuWkhOeQhuOAglxu6Ziy6ZSZ77yaeHNpbigxL3gp4oaSMO+8jHNpbngveOKGkjHjgIIifSx7ImlkIjoiTS0wMDItMTEiLCJ0aXRsZSI6Ik0tMDAyLTExIOetieS7t+aXoOept+WwjyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi562J5Lu35peg56m35bCPIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJu4oaS4oie5pe25LiOc2luwrIoMS9uKeetieS7t+eahOaXoOept+WwjyIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuacquW5s+aWueetieS7t+mHj+OAgiIsImFuYWx5c2lzIjoic2luKDEvbil+MS9u77yM5omA5Lul5bmz5pa5fjEvbsKy44CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLnrYnku7fml6DnqbflsI8iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHnrYnku7fml6DnqbflsI9cbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5Yik5pat5p6B6ZmQ57G75Z6L77ya55u05o6l5Luj5YWl44CBMC8w44CB4oieL+KInuOAgeaXoOept+Wkp+mHj+OAgeW5guaMh+Wei+aIluaVsOWIl+Wei+OAglxuMi4gMC8wIOWei+S8mOWFiOiAg+iZkeetieS7t+aXoOept+Wwj+OAgeWboOW8j+WIhuino+OAgemAmuWIhuOAgeacieeQhuWMluaIlua0m+W/hei+vuOAglxuMy4g5LiJ6KeS5p6B6ZmQ6K6w5L2PIHNpbmF4fmF444CBdGFuYXh+YXjjgIExLWNvc3h+eMKyLzLjgIJcbjQuIOW5guaMh+Wei+e7n+S4gOWGmeaIkCBlXnvmjIfmlbDCt2xu5bqV5pWwfe+8jOWFiOaxguaMh+aVsOS4iueahOaegemZkOOAglxuNS4g5pWw5YiX5YiG5byP55yL5pyA6auY5qyh77yb5oyH5pWw5Z6L5YWI5q+U6L6D5pyA5aSn5bqV5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5pyq5bmz5pa5562J5Lu36YeP44CCXG7pmLLplJnvvJpzaW4oMS9uKX4xL27vvIzmiYDku6XlubPmlrl+MS9uwrLjgIIifSx7ImlkIjoiTS0wMDItMTIiLCJ0aXRsZSI6Ik0tMDAyLTEyIOWNleS+p+aegemZkCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5Y2V5L6n5p6B6ZmQIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJ44oaSMOKBu+aXtiB5PWVeKDEveCkg55qE5p6B6ZmQIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5pyq5Yik5patMS944oaSLeKInuOAgiIsImFuYWx5c2lzIjoieOKGkjDigbvvvIwxL3jihpIt4oie77yMZV4oMS94KeKGkjDjgIIiLCJ0YWdzIjpbIk0tMDAyIiwi6L+e57ut44CB6Ze05pat44CB5a+85pWw5a6a5LmJ44CB5Y+v5a+85oCnKDI16aKYKSIsIuWNleS+p+aegemZkCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWNleS+p+aegemZkFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjliKTmlq3mnoHpmZDnsbvlnovvvJrnm7TmjqXku6PlhaXjgIEwLzDjgIHiiJ4v4oie44CB5peg56m35aSn6YeP44CB5bmC5oyH5Z6L5oiW5pWw5YiX5Z6L44CCXG4yLiAwLzAg5Z6L5LyY5YWI6ICD6JmR562J5Lu35peg56m35bCP44CB5Zug5byP5YiG6Kej44CB6YCa5YiG44CB5pyJ55CG5YyW5oiW5rSb5b+F6L6+44CCXG4zLiDkuInop5LmnoHpmZDorrDkvY8gc2luYXh+YXjjgIF0YW5heH5heOOAgTEtY29zeH54wrIvMuOAglxuNC4g5bmC5oyH5Z6L57uf5LiA5YaZ5oiQIGVee+aMh+aVsMK3bG7lupXmlbB977yM5YWI5rGC5oyH5pWw5LiK55qE5p6B6ZmQ44CCXG41LiDmlbDliJfliIblvI/nnIvmnIDpq5jmrKHvvJvmjIfmlbDlnovlhYjmr5TovoPmnIDlpKflupXmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmnKrliKTmlq0xL3jihpIt4oie44CCXG7pmLLplJnvvJp44oaSMOKBu++8jDEveOKGki3iiJ7vvIxlXigxL3gp4oaSMOOAgiJ9LHsiaWQiOiJNLTAwMi0xMyIsInRpdGxlIjoiTS0wMDItMTMg5YiG5q616L+e57utIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLliIbmrrXov57nu60iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIhuauteWHveaVsOaxguWumuS5ieWfn+OAgeWHveaVsOWAvOOAgei/nue7reWMuumXtOOAgWxpbSh44oaSMSlmKHgpIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5pyq5YWI55yL5q+P5q616IyD5Zu05ZKM5YiG55WM54K544CCIiwiYW5hbHlzaXMiOiLliIbmrrXpopjpgJDmrrUr5YiG55WM54K55bem5Y+z5p6B6ZmQ44CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLliIbmrrXov57nu60iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHliIbmrrXov57nu61cbuOAkOino+mimOatpemqpOOAkVxuMS4g5oqK5omA5pyJ6ZmQ5Yi26YCQ6aG55YiX5Ye65p2l77ya5YiG5q+N4omgMO+8jOWBtuasoeagueWPt+WGheKJpTDvvIzlr7nmlbDnnJ/mlbA+MO+8jOWPjeS4ieinkuWGhemDqOWcqOWFgeiuuOiMg+WbtOWGheOAglxuMi4g5aaC5p6c5qC55Y+35Zyo5YiG5q+N77yM5b+F6aG75YaZ5oiQ5qC55Y+35YaFPjDjgIJcbjMuIOWmguaenOacieWkjeWQiOWHveaVsO+8jOWFiOaKiuWGheWxguaVtOS9k+S7o+WFpeWkluWxguWumuS5ieWfn+OAglxuNC4g6Kej5Ye65q+P5Liq6ZmQ5Yi25ZCO55S75pWw6L205Y+W5Lqk6ZuG77yM56uv54K55byA6Zet6KaB6YCQ5Liq5qOA5p+l44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5pyq5YWI55yL5q+P5q616IyD5Zu05ZKM5YiG55WM54K544CCXG7pmLLplJnvvJrliIbmrrXpopjpgJDmrrUr5YiG55WM54K55bem5Y+z5p6B6ZmQ44CCIn0seyJpZCI6Ik0tMDAyLTE0IiwidGl0bGUiOiJNLTAwMi0xNCDml6Dnqbfpl7Tmlq0iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuaXoOept+mXtOaWrSIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoiZih4KT0xLygxLWVeeCnlnKh4PTDpmYTov5Hpl7Tmlq3mg4XlhrUiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmnKrlhYjmib7liIbmr43kuLow44CCIiwiYW5hbHlzaXMiOiLliIbmr40w54K555yL5bem5Y+z5p6B6ZmQ77yM6LaL5peg56m35Li65peg56m36Ze05pat44CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLml6Dnqbfpl7Tmlq0iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHml6Dnqbfpl7Tmlq1cbuOAkOino+mimOatpemqpOOAkVxuMS4g6L+e57ut6aKY5YWI5YaZ5LiJ5Lu25LqL77ya5Ye95pWw5YC844CB5bem5p6B6ZmQ44CB5Y+z5p6B6ZmQ44CCXG4yLiDliIbmrrXngrnopoHljZXni6zmo4Dmn6XvvIzkuI3opoHlj6rnnIvkuKTkvqfooajovr7lvI/jgIJcbjMuIOmbtueCueWumueQhua1geeoi++8muiuvuWHveaVsOOAgeivgei/nue7reOAgeeul+err+eCueOAgeeci+W8guWPt+OAgeS4i+e7k+iuuuOAglxuNC4g5LuL5YC85a6a55CG6KaB5YWI6K+B5piO55uu5qCH5YC85aS55Zyo5pyA5aSn5YC85ZKM5pyA5bCP5YC85LmL6Ze044CCXG41LiDmlbDliJfmnoHpmZDlrZjlnKjmgKfkvJjlhYjmg7PliLDljZXosIPmnInnlYzlrprnkIbjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmnKrlhYjmib7liIbmr43kuLow44CCXG7pmLLplJnvvJrliIbmr40w54K555yL5bem5Y+z5p6B6ZmQ77yM6LaL5peg56m35Li65peg56m36Ze05pat44CCIn0seyJpZCI6Ik0tMDAyLTE1IiwidGl0bGUiOiJNLTAwMi0xNSDot7Pot4Ppl7Tmlq0iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6Iui3s+i3g+mXtOaWrSIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoiZih4KT0xLygxKzJeKDEveCkp5ZyoeD0w6ZmE6L+R6Ze05pat5oOF5Ya1Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5pyq5YiG5bem5Y+z5p6B6ZmQ44CCIiwiYW5hbHlzaXMiOiIwK+i2izDvvIwwLei2izHvvIzlt6blj7PkuI3nrYnkuLrot7Pot4PjgIIiLCJ0YWdzIjpbIk0tMDAyIiwi6L+e57ut44CB6Ze05pat44CB5a+85pWw5a6a5LmJ44CB5Y+v5a+85oCnKDI16aKYKSIsIui3s+i3g+mXtOaWrSJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkei3s+i3g+mXtOaWrVxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDov57nu63popjlhYjlhpnkuInku7bkuovvvJrlh73mlbDlgLzjgIHlt6bmnoHpmZDjgIHlj7PmnoHpmZDjgIJcbjIuIOWIhuauteeCueimgeWNleeLrOajgOafpe+8jOS4jeimgeWPqueci+S4pOS+p+ihqOi+vuW8j+OAglxuMy4g6Zu254K55a6a55CG5rWB56iL77ya6K6+5Ye95pWw44CB6K+B6L+e57ut44CB566X56uv54K544CB55yL5byC5Y+344CB5LiL57uT6K6644CCXG40LiDku4vlgLzlrprnkIbopoHlhYjor4HmmI7nm67moIflgLzlpLnlnKjmnIDlpKflgLzlkozmnIDlsI/lgLzkuYvpl7TjgIJcbjUuIOaVsOWIl+aegemZkOWtmOWcqOaAp+S8mOWFiOaDs+WIsOWNleiwg+acieeVjOWumueQhuOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muacquWIhuW3puWPs+aegemZkOOAglxu6Ziy6ZSZ77yaMCvotosw77yMMC3otosx77yM5bem5Y+z5LiN562J5Li66Lez6LeD44CCIn0seyJpZCI6Ik0tMDAyLTE2IiwidGl0bGUiOiJNLTAwMi0xNiDov57nu63lj6/lr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6Iui/nue7reWPr+WvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoieCBhcmN0YW4oMS94wrIp5YiG5q615Ye95pWw5ZyoMOWkhOi/nue7reS4juWPr+WvvCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuingWFyY3RhbigxL3jCsinor6/liKTjgIIiLCJhbmFseXNpcyI6Iui/nue7reeUqOWkuemAvO+8jOWPr+WvvOeUqOWumuS5ieOAgiIsInRhZ3MiOlsiTS0wMDIiLCLov57nu63jgIHpl7Tmlq3jgIHlr7zmlbDlrprkuYnjgIHlj6/lr7zmgKcoMjXpopgpIiwi6L+e57ut5Y+v5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR6L+e57ut5Y+v5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOi/nue7remimOWFiOWGmeS4ieS7tuS6i++8muWHveaVsOWAvOOAgeW3puaegemZkOOAgeWPs+aegemZkOOAglxuMi4g5YiG5q6154K56KaB5Y2V54us5qOA5p+l77yM5LiN6KaB5Y+q55yL5Lik5L6n6KGo6L6+5byP44CCXG4zLiDpm7bngrnlrprnkIbmtYHnqIvvvJrorr7lh73mlbDjgIHor4Hov57nu63jgIHnrpfnq6/ngrnjgIHnnIvlvILlj7fjgIHkuIvnu5PorrrjgIJcbjQuIOS7i+WAvOWumueQhuimgeWFiOivgeaYjuebruagh+WAvOWkueWcqOacgOWkp+WAvOWSjOacgOWwj+WAvOS5i+mXtOOAglxuNS4g5pWw5YiX5p6B6ZmQ5a2Y5Zyo5oCn5LyY5YWI5oOz5Yiw5Y2V6LCD5pyJ55WM5a6a55CG44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya6KeBYXJjdGFuKDEveMKyKeivr+WIpOOAglxu6Ziy6ZSZ77ya6L+e57ut55So5aS56YC877yM5Y+v5a+855So5a6a5LmJ44CCIn0seyJpZCI6Ik0tMDAyLTE3IiwidGl0bGUiOiJNLTAwMi0xNyDnrYnku7fml6DnqbflsI8iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuetieS7t+aXoOept+WwjyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5b2TbuKGkuKInuaXtuS4jnNpbsKyKDEvbinnrYnku7fnmoTml6DnqbflsI/ph48iLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiJzaW4oMS9uKX4xL27lkI7lv5jorrDlubPmlrnjgIIiLCJhbmFseXNpcyI6Iue7k+aenOS4ujEvbsKy44CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLnrYnku7fml6DnqbflsI8iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHnrYnku7fml6DnqbflsI9cbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5Yik5pat5p6B6ZmQ57G75Z6L77ya55u05o6l5Luj5YWl44CBMC8w44CB4oieL+KInuOAgeaXoOept+Wkp+mHj+OAgeW5guaMh+Wei+aIluaVsOWIl+Wei+OAglxuMi4gMC8wIOWei+S8mOWFiOiAg+iZkeetieS7t+aXoOept+Wwj+OAgeWboOW8j+WIhuino+OAgemAmuWIhuOAgeacieeQhuWMluaIlua0m+W/hei+vuOAglxuMy4g5LiJ6KeS5p6B6ZmQ6K6w5L2PIHNpbmF4fmF444CBdGFuYXh+YXjjgIExLWNvc3h+eMKyLzLjgIJcbjQuIOW5guaMh+Wei+e7n+S4gOWGmeaIkCBlXnvmjIfmlbDCt2xu5bqV5pWwfe+8jOWFiOaxguaMh+aVsOS4iueahOaegemZkOOAglxuNS4g5pWw5YiX5YiG5byP55yL5pyA6auY5qyh77yb5oyH5pWw5Z6L5YWI5q+U6L6D5pyA5aSn5bqV5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77yac2luKDEvbil+MS9u5ZCO5b+Y6K6w5bmz5pa544CCXG7pmLLplJnvvJrnu5PmnpzkuLoxL27CsuOAgiJ9LHsiaWQiOiJNLTAwMi0xOCIsInRpdGxlIjoiTS0wMDItMTgg5Y2V5L6n5p6B6ZmQIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLljZXkvqfmnoHpmZAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuW9k3jihpIw4oG75pe277yM5rGCeT1lXigxL3gp5p6B6ZmQIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5pa55ZCR5Yik5pat6ZSZ44CCIiwiYW5hbHlzaXMiOiIw4oG75L2/MS944oaSLeKInu+8jOaMh+aVsOi2izDjgIIiLCJ0YWdzIjpbIk0tMDAyIiwi6L+e57ut44CB6Ze05pat44CB5a+85pWw5a6a5LmJ44CB5Y+v5a+85oCnKDI16aKYKSIsIuWNleS+p+aegemZkCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWNleS+p+aegemZkFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjliKTmlq3mnoHpmZDnsbvlnovvvJrnm7TmjqXku6PlhaXjgIEwLzDjgIHiiJ4v4oie44CB5peg56m35aSn6YeP44CB5bmC5oyH5Z6L5oiW5pWw5YiX5Z6L44CCXG4yLiAwLzAg5Z6L5LyY5YWI6ICD6JmR562J5Lu35peg56m35bCP44CB5Zug5byP5YiG6Kej44CB6YCa5YiG44CB5pyJ55CG5YyW5oiW5rSb5b+F6L6+44CCXG4zLiDkuInop5LmnoHpmZDorrDkvY8gc2luYXh+YXjjgIF0YW5heH5heOOAgTEtY29zeH54wrIvMuOAglxuNC4g5bmC5oyH5Z6L57uf5LiA5YaZ5oiQIGVee+aMh+aVsMK3bG7lupXmlbB977yM5YWI5rGC5oyH5pWw5LiK55qE5p6B6ZmQ44CCXG41LiDmlbDliJfliIblvI/nnIvmnIDpq5jmrKHvvJvmjIfmlbDlnovlhYjmr5TovoPmnIDlpKflupXmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmlrnlkJHliKTmlq3plJnjgIJcbumYsumUme+8mjDigbvkvb8xL3jihpIt4oie77yM5oyH5pWw6LaLMOOAgiJ9LHsiaWQiOiJNLTAwMi0xOSIsInRpdGxlIjoiTS0wMDItMTkg5YiG5q615Ye95pWwIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLliIbmrrXlh73mlbAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIhuauteWHveaVsO+8muWumuS5ieWfn+OAgeeJueauiuWAvOOAgei/nue7reWMuumXtOOAgWxpbSh44oaSMSlmKHgpIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5YiG55WM54K55rKh5pyJ5Y2V54us5qOA5p+l44CCIiwiYW5hbHlzaXMiOiLmr4/kuKrliIbnlYzngrnpg73mn6Xlt6bmnoHpmZDjgIHlj7PmnoHpmZDjgIHlh73mlbDlgLzjgIIiLCJ0YWdzIjpbIk0tMDAyIiwi6L+e57ut44CB6Ze05pat44CB5a+85pWw5a6a5LmJ44CB5Y+v5a+85oCnKDI16aKYKSIsIuWIhuauteWHveaVsCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWIhuauteWHveaVsFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDmiormiYDmnInpmZDliLbpgJDpobnliJflh7rmnaXvvJrliIbmr43iiaAw77yM5YG25qyh5qC55Y+35YaF4omlMO+8jOWvueaVsOecn+aVsD4w77yM5Y+N5LiJ6KeS5YaF6YOo5Zyo5YWB6K646IyD5Zu05YaF44CCXG4yLiDlpoLmnpzmoLnlj7flnKjliIbmr43vvIzlv4XpobvlhpnmiJDmoLnlj7flhoU+MOOAglxuMy4g5aaC5p6c5pyJ5aSN5ZCI5Ye95pWw77yM5YWI5oqK5YaF5bGC5pW05L2T5Luj5YWl5aSW5bGC5a6a5LmJ5Z+f44CCXG40LiDop6Plh7rmr4/kuKrpmZDliLblkI7nlLvmlbDovbTlj5bkuqTpm4bvvIznq6/ngrnlvIDpl63opoHpgJDkuKrmo4Dmn6XjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrliIbnlYzngrnmsqHmnInljZXni6zmo4Dmn6XjgIJcbumYsumUme+8muavj+S4quWIhueVjOeCuemDveafpeW3puaegemZkOOAgeWPs+aegemZkOOAgeWHveaVsOWAvOOAgiJ9LHsiaWQiOiJNLTAwMi0yMCIsInRpdGxlIjoiTS0wMDItMjAg6Ze05pat54K5Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLpl7Tmlq3ngrkiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIpOaWrWYoeCk9MS8oMS1lXngp5ZyoeD0w6Ze05pat5oOF5Ya1Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5rKh5pyJ6K+G5Yir5peg56m36Ze05pat44CCIiwiYW5hbHlzaXMiOiLliIbmr40w5LiU5bem5Y+z5peg56m377yM5Li65peg56m36Ze05pat44CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLpl7Tmlq3ngrkiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHpl7Tmlq3ngrlcbuOAkOino+mimOatpemqpOOAkVxuMS4g6L+e57ut6aKY5YWI5YaZ5LiJ5Lu25LqL77ya5Ye95pWw5YC844CB5bem5p6B6ZmQ44CB5Y+z5p6B6ZmQ44CCXG4yLiDliIbmrrXngrnopoHljZXni6zmo4Dmn6XvvIzkuI3opoHlj6rnnIvkuKTkvqfooajovr7lvI/jgIJcbjMuIOmbtueCueWumueQhua1geeoi++8muiuvuWHveaVsOOAgeivgei/nue7reOAgeeul+err+eCueOAgeeci+W8guWPt+OAgeS4i+e7k+iuuuOAglxuNC4g5LuL5YC85a6a55CG6KaB5YWI6K+B5piO55uu5qCH5YC85aS55Zyo5pyA5aSn5YC85ZKM5pyA5bCP5YC85LmL6Ze044CCXG41LiDmlbDliJfmnoHpmZDlrZjlnKjmgKfkvJjlhYjmg7PliLDljZXosIPmnInnlYzlrprnkIbjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmsqHmnInor4bliKvml6Dnqbfpl7Tmlq3jgIJcbumYsumUme+8muWIhuavjTDkuJTlt6blj7Pml6DnqbfvvIzkuLrml6Dnqbfpl7Tmlq3jgIIifSx7ImlkIjoiTS0wMDItMjEiLCJ0aXRsZSI6Ik0tMDAyLTIxIOmXtOaWreeCuSIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi6Ze05pat54K5Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLliKTmlq1mKHgpPTEvKDErMl4oMS94KSnlnKh4PTDpl7Tmlq3mg4XlhrUiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLlt6blj7PmnoHpmZDmnKrliIblvIDjgIIiLCJhbmFseXNpcyI6IuW3puWPs+aciemZkOS9huS4jeetie+8jOaYr+i3s+i3g+mXtOaWreOAgiIsInRhZ3MiOlsiTS0wMDIiLCLov57nu63jgIHpl7Tmlq3jgIHlr7zmlbDlrprkuYnjgIHlj6/lr7zmgKcoMjXpopgpIiwi6Ze05pat54K5Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR6Ze05pat54K5XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOi/nue7remimOWFiOWGmeS4ieS7tuS6i++8muWHveaVsOWAvOOAgeW3puaegemZkOOAgeWPs+aegemZkOOAglxuMi4g5YiG5q6154K56KaB5Y2V54us5qOA5p+l77yM5LiN6KaB5Y+q55yL5Lik5L6n6KGo6L6+5byP44CCXG4zLiDpm7bngrnlrprnkIbmtYHnqIvvvJrorr7lh73mlbDjgIHor4Hov57nu63jgIHnrpfnq6/ngrnjgIHnnIvlvILlj7fjgIHkuIvnu5PorrrjgIJcbjQuIOS7i+WAvOWumueQhuimgeWFiOivgeaYjuebruagh+WAvOWkueWcqOacgOWkp+WAvOWSjOacgOWwj+WAvOS5i+mXtOOAglxuNS4g5pWw5YiX5p6B6ZmQ5a2Y5Zyo5oCn5LyY5YWI5oOz5Yiw5Y2V6LCD5pyJ55WM5a6a55CG44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5bem5Y+z5p6B6ZmQ5pyq5YiG5byA44CCXG7pmLLplJnvvJrlt6blj7PmnInpmZDkvYbkuI3nrYnvvIzmmK/ot7Pot4Ppl7Tmlq3jgIIifSx7ImlkIjoiTS0wMDItMjIiLCJ0aXRsZSI6Ik0tMDAyLTIyIOWPr+WvvOaApyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5Y+v5a+85oCnIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJ4YXJjdGFuKDEveMKyKeWIhuauteWHveaVsOWcqDDlpITov57nu63lkozlj6/lr7wiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmsqHnlKjlrprkuYnliKTmlq0w54K55a+85pWw44CCIiwiYW5hbHlzaXMiOiJm4oCyKDApPWxpbSBhcmN0YW4oMS94wrIpPc+ALzLjgIIiLCJ0YWdzIjpbIk0tMDAyIiwi6L+e57ut44CB6Ze05pat44CB5a+85pWw5a6a5LmJ44CB5Y+v5a+85oCnKDI16aKYKSIsIuWPr+WvvOaApyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWPr+WvvOaAp1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDov57nu63popjlhYjlhpnkuInku7bkuovvvJrlh73mlbDlgLzjgIHlt6bmnoHpmZDjgIHlj7PmnoHpmZDjgIJcbjIuIOWIhuauteeCueimgeWNleeLrOajgOafpe+8jOS4jeimgeWPqueci+S4pOS+p+ihqOi+vuW8j+OAglxuMy4g6Zu254K55a6a55CG5rWB56iL77ya6K6+5Ye95pWw44CB6K+B6L+e57ut44CB566X56uv54K544CB55yL5byC5Y+344CB5LiL57uT6K6644CCXG40LiDku4vlgLzlrprnkIbopoHlhYjor4HmmI7nm67moIflgLzlpLnlnKjmnIDlpKflgLzlkozmnIDlsI/lgLzkuYvpl7TjgIJcbjUuIOaVsOWIl+aegemZkOWtmOWcqOaAp+S8mOWFiOaDs+WIsOWNleiwg+acieeVjOWumueQhuOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muayoeeUqOWumuS5ieWIpOaWrTDngrnlr7zmlbDjgIJcbumYsumUme+8mmbigLIoMCk9bGltIGFyY3RhbigxL3jCsik9z4AvMuOAgiJ9LHsiaWQiOiJNLTAwMi0yMyIsInRpdGxlIjoiTS0wMDItMjMg5Y+v5b6u5Y+v5a+86L+e57ut5YWz57O7Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlj6/lvq7lj6/lr7zov57nu63lhbPns7siLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6InNpbjJ4K3jCsmNvcygxL3gp5YiG5q615Ye95pWw5ZyoMOWkhOS4jeaIkOeri+mhuSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iui/nue7reOAgeWPr+WvvOOAgeWPr+W+ruWFs+ezu+a3t+S5seOAgiIsImFuYWx5c2lzIjoi5LiA5YWD5Ye95pWw5Y+v5a+84oeU5Y+v5b6u77yM5Y+v5a+84oeS6L+e57ut44CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLlj6/lvq7lj6/lr7zov57nu63lhbPns7siXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlj6/lvq7lj6/lr7zov57nu63lhbPns7tcbuOAkOino+mimOatpemqpOOAkVxuMS4g6L+e57ut6aKY5YWI5YaZ5LiJ5Lu25LqL77ya5Ye95pWw5YC844CB5bem5p6B6ZmQ44CB5Y+z5p6B6ZmQ44CCXG4yLiDliIbmrrXngrnopoHljZXni6zmo4Dmn6XvvIzkuI3opoHlj6rnnIvkuKTkvqfooajovr7lvI/jgIJcbjMuIOmbtueCueWumueQhua1geeoi++8muiuvuWHveaVsOOAgeivgei/nue7reOAgeeul+err+eCueOAgeeci+W8guWPt+OAgeS4i+e7k+iuuuOAglxuNC4g5LuL5YC85a6a55CG6KaB5YWI6K+B5piO55uu5qCH5YC85aS55Zyo5pyA5aSn5YC85ZKM5pyA5bCP5YC85LmL6Ze044CCXG41LiDmlbDliJfmnoHpmZDlrZjlnKjmgKfkvJjlhYjmg7PliLDljZXosIPmnInnlYzlrprnkIbjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrov57nu63jgIHlj6/lr7zjgIHlj6/lvq7lhbPns7vmt7fkubHjgIJcbumYsumUme+8muS4gOWFg+WHveaVsOWPr+WvvOKHlOWPr+W+ru+8jOWPr+WvvOKHkui/nue7reOAgiJ9LHsiaWQiOiJNLTAwMi0yNCIsInRpdGxlIjoiTS0wMDItMjQg5a+85pWw5a6a5LmJIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlr7zmlbDlrprkuYkiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IueUqOWumuS5ieaxgmYoeCk9eMKy5ZyoeD0x5aSE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5beu5ZWG5YaZ6ZSZ44CCIiwiYW5hbHlzaXMiOiLku6PlhaUoMSvOlHgpwrItMeOAgiIsInRhZ3MiOlsiTS0wMDIiLCLov57nu63jgIHpl7Tmlq3jgIHlr7zmlbDlrprkuYnjgIHlj6/lr7zmgKcoMjXpopgpIiwi5a+85pWw5a6a5LmJIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5a+85pWw5a6a5LmJXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWmguaenOiAg+WvvOaVsOWumuS5ie+8jOWGmeWHuiBsaW0oaOKGkjApW2YoeDAraCktZih4MCldL2jjgIJcbjIuIOWQq+agueW8j+WFiOacieeQhuWMlu+8jOWQq+e7neWvueWAvOaIluWIhuauteimgeWIhuW3puWPs+aegemZkOOAglxuMy4g5YiG5q6154K55Y+v5a+85b+F6aG75YWI6L+e57ut77yM5YaN5q+U6L6D5bem5a+85pWw5ZKM5Y+z5a+85pWw44CCXG40LiDmsYLlj4LmlbDpopjpgJrluLjlhYjnlLHov57nu63mgKfmsYLkuIDkuKrlj4LmlbDvvIzlho3nlLHlt6blj7Plr7zmlbDnm7jnrYnmsYLlj6bkuIDkuKrlj4LmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlt67llYblhpnplJnjgIJcbumYsumUme+8muS7o+WFpSgxK86UeCnCsi0x44CCIn0seyJpZCI6Ik0tMDAyLTI1IiwidGl0bGUiOiJNLTAwMi0yNSDlr7zmlbDlrprkuYkiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWvvOaVsOWumuS5iSIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5a+85pWw5a6a5LmJ5Y+Y5b2i77yazpR4L1tmKHgwKzPOlHgpLWYoeDApXSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IjPOlHjlgI3mlbDmnKrlpITnkIbjgIIiLCJhbmFseXNpcyI6Iue7k+aenOS4ujEvWzNm4oCyKHgwKV3jgIIg5LqM5Yi36aG65bqP77ya5YWI5Yi35YiH57q/55u45YiH4oaS5Y+C5pWw5pa556iL4oaS5ZWG5rGC5a+84oaS5Y+N5LiJ6KeS4oaS5YiG5q615rGC5a+844CCIiwidGFncyI6WyJNLTAwMiIsIui/nue7reOAgemXtOaWreOAgeWvvOaVsOWumuS5ieOAgeWPr+WvvOaApygyNemimCkiLCLlr7zmlbDlrprkuYkiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlr7zmlbDlrprkuYlcbuOAkOino+mimOatpemqpOOAkVxuMS4g5aaC5p6c6ICD5a+85pWw5a6a5LmJ77yM5YaZ5Ye6IGxpbSho4oaSMClbZih4MCtoKS1mKHgwKV0vaOOAglxuMi4g5ZCr5qC55byP5YWI5pyJ55CG5YyW77yM5ZCr57ud5a+55YC85oiW5YiG5q616KaB5YiG5bem5Y+z5p6B6ZmQ44CCXG4zLiDliIbmrrXngrnlj6/lr7zlv4XpobvlhYjov57nu63vvIzlho3mr5TovoPlt6blr7zmlbDlkozlj7Plr7zmlbDjgIJcbjQuIOaxguWPguaVsOmimOmAmuW4uOWFiOeUsei/nue7reaAp+axguS4gOS4quWPguaVsO+8jOWGjeeUseW3puWPs+WvvOaVsOebuOetieaxguWPpuS4gOS4quWPguaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mjPOlHjlgI3mlbDmnKrlpITnkIbjgIJcbumYsumUme+8mue7k+aenOS4ujEvWzNm4oCyKHgwKV3jgIIg5LqM5Yi36aG65bqP77ya5YWI5Yi35YiH57q/55u45YiH4oaS5Y+C5pWw5pa556iL4oaS5ZWG5rGC5a+84oaS5Y+N5LiJ6KeS4oaS5YiG5q615rGC5a+844CCIn0seyJpZCI6Ik0tMDAzLTAxIiwidGl0bGUiOiJNLTAwMy0wMSDov4flrprngrnliIfnur8iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6Iui/h+WumueCueWIh+e6vyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT14XigzLzIp6YCa6L+H54K5KDAsLTQp55qE5YiH57q/5pa556iLIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5oqK57uZ5a6a54K55b2T5YiH54K544CCIiwiYW5hbHlzaXMiOiLov4fngrniiaDliIfngrnvvIzlj6borr4oeDAsZih4MCkp44CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLov4flrprngrnliIfnur8iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHov4flrprngrnliIfnur9cbuOAkOino+mimOatpemqpOOAkVxuMS4g6K6+5YiH54K55qiq5Z2Q5qCH5Li6IHQ+MO+8jOWIh+eCueS4uiAodCx0XigzLzIpKeOAglxuMi4g5puy57q/5a+85pWwIHknPSgzLzIp4oiadOOAglxuMy4g5YiH57q/5pa556iL77yaeS10XigzLzIpPSgzLzIp4oiadCh4LXQp44CCXG40LiDku6PlhaXngrkgKDAsLTQp77yaLTQtdF4oMy8yKT0tKDMvMil0XigzLzIp44CCXG41LiDlvpcgdF4oMy8yKT0477yM5omA5LulIHQ9NOOAglxuNi4g5pac546H5Li6IDPvvIzliIfnur/kuLogeS04PTMoeC00KeOAglxu44CQ5q2j56Gu562U5qGI44CReT0zeC0044CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muaKiue7meWumueCueW9k+WIh+eCueOAglxu6Ziy6ZSZ77ya6L+H54K54omg5YiH54K577yM5Y+m6K6+KHgwLGYoeDApKeOAgiJ9LHsiaWQiOiJNLTAwMy0wMiIsInRpdGxlIjoiTS0wMDMtMDIg55u45YiH5rGC5Y+C5pWwIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLnm7jliIfmsYLlj4LmlbAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Ink9eMKyK2F4K2LkuI55PXjCsyt45ZyoKDEsMinlpITnm7jliIfvvIzmsYJhLGIiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLor6/op6Pnm7jliIflkozms5Xnur/mnInlhbPjgIIiLCJhbmFseXNpcyI6IuebuOWIhz3lhbHngrkr5YWx5pac546H44CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLnm7jliIfmsYLlj4LmlbAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHnm7jliIfmsYLlj4LmlbBcbuOAkOino+mimOatpemqpOOAkVxuMS4g5ZyoICgxLDIpIOWkhOebuOWIh++8jOWFiOeUqOWHveaVsOWAvOebuOetie+8mjErYStiPTLvvIzlvpcgYStiPTHjgIJcbjIuIOWGjeeUqOaWnOeOh+ebuOetie+8muW3pui+ueWvvOaVsCAyeCth77yM5ZyoIHg9MSDkuLogMith44CCXG4zLiDlj7PovrkgeT14wrMreCDnmoTlr7zmlbDkuLogM3jCsisx77yM5ZyoIHg9MSDkuLogNOOAglxuNC4g5LukIDIrYT0077yM5b6XIGE9MuOAglxuNS4g5Luj5YWlIGErYj0x77yM5b6XIGI9LTHjgIJcbuOAkOato+ehruetlOahiOOAkWE9Mu+8jGI9LTHjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya6K+v6Kej55u45YiH5ZKM5rOV57q/5pyJ5YWz44CCXG7pmLLplJnvvJrnm7jliIc95YWx54K5K+WFseaWnOeOh+OAgiJ9LHsiaWQiOiJNLTAwMy0wMyIsInRpdGxlIjoiTS0wMDMtMDMg5Y+C5pWw5pa556iL5YiH57q/Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlj4LmlbDmlrnnqIvliIfnur8iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWPguaVsOaWueeoi3g9M2Nvc3QseT0yc2ludO+8jHQ9z4AvNOaxguWIh+e6vyIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuS4jeS8mmR5L2R4PShkeS9kdCkvKGR4L2R0KeOAgiIsImFuYWx5c2lzIjoi5YWI5YiH54K577yM5YaN5pac546H77yM5YaN54K55pac5byP44CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLlj4LmlbDmlrnnqIvliIfnur8iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlj4LmlbDmlrnnqIvliIfnur9cbuOAkOino+mimOatpemqpOOAkVxuMS4gdD3PgC80IOaXtu+8jOeCueS4uiB4PTNjb3Moz4AvNCk9M+KImjIvMu+8jHk9MnNpbijPgC80KT3iiJoy44CCXG4yLiBkeC9kdD0tM3NpbnTvvIxkeS9kdD0yY29zdOOAglxuMy4gZHkvZHg9KGR5L2R0KS8oZHgvZHQpPTJjb3N0LygtM3NpbnQp44CCXG40LiB0Pc+ALzQg5pe25pac546HIGs9LTIvM+OAglxuNS4g5YiH57q/77yaeS3iiJoyPS0oMi8zKSh4LTPiiJoyLzIp44CCXG7jgJDmraPnoa7nrZTmoYjjgJF5PS0oMi8zKXgrMuKImjLjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LiN5LyaZHkvZHg9KGR5L2R0KS8oZHgvZHQp44CCXG7pmLLplJnvvJrlhYjliIfngrnvvIzlho3mlpznjofvvIzlho3ngrnmlpzlvI/jgIIifSx7ImlkIjoiTS0wMDMtMDQiLCJ0aXRsZSI6Ik0tMDAzLTA0IOWPguaVsOaWueeoiyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5Y+C5pWw5pa556iLIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLlj4LmlbDmlrnnqIt4PTJ0wrIrdCx5PWxuKDEtdCnvvIx4PTPlpITliIfnur8iLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLnu5l45pyq5YWI6KejdOW5tuafpeWumuS5ieWfn+OAgiIsImFuYWx5c2lzIjoi5YWI6KejeCh0KT0z77yM5YaN562bdOOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5Y+C5pWw5pa556iLIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Y+C5pWw5pa556iL5YiH57q/XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOeUsSB4PTMg6KejIDJ0wrIrdD0z77yM5b6XIHQ9MSDmiJYgdD0tMy8y44CCXG4yLiB5PWxuKDEtdCkg6KaB5rGCIHQ8Me+8jOaJgOS7peWPliB0PS0zLzLjgIJcbjMuIGR4L2R0PTR0KzE9LTXvvIxkeS9kdD0tMS8oMS10KT0tMi8144CCXG40LiBkeS9keD0oZHkvZHQpLyhkeC9kdCk9KC0yLzUpLygtNSk9Mi8yNeOAglxuNS4g5YiH54K55Li6ICgzLGxuKDUvMikp44CCXG7jgJDmraPnoa7nrZTmoYjjgJF5LWxuKDUvMik9KDIvMjUpKHgtMynjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya57uZeOacquWFiOino3Tlubbmn6XlrprkuYnln5/jgIJcbumYsumUme+8muWFiOino3godCk9M++8jOWGjeetm3TjgIIifSx7ImlkIjoiTS0wMDMtMDUiLCJ0aXRsZSI6Ik0tMDAzLTA1IOe7neWvueWAvOaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi57ud5a+55YC85rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PWxufHh855qE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5LiN5Lya5YiGeD4wL3g8MOWkhOeQhuOAgiIsImFuYWx5c2lzIjoibG58eHzlr7zmlbA9MS94ICh44omgMCnjgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIue7neWvueWAvOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkee7neWvueWAvOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiB5PWxufHh8IOeahOWumuS5ieWfn+S4uiB44omgMOOAglxuMi4geD4wIOaXtu+8jGxufHh8PWxueO+8jOWvvOaVsOS4uiAxL3jjgIJcbjMuIHg8MCDml7bvvIxsbnx4fD1sbigteCnvvIzlr7zmlbDkuLogKC0xKS8oLXgpPTEveOOAglxu44CQ5q2j56Gu562U5qGI44CReSc9MS9477yMeOKJoDDjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LiN5Lya5YiGeD4wL3g8MOWkhOeQhuOAglxu6Ziy6ZSZ77yabG58eHzlr7zmlbA9MS94ICh44omgMCnjgIIifSx7ImlkIjoiTS0wMDMtMDYiLCJ0aXRsZSI6Ik0tMDAzLTA2IOWIhuauteaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5YiG5q615rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLliIbmrrVmPXtjb3N4LHjiiaQwOyBlXngseD4wfeaxgmbigLIoeCkiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLliIbnlYzngrnmsqHljZXni6zliKTmlq3jgIIiLCJhbmFseXNpcyI6IuS4pOi+ueWIhuWIq+axgu+8jDDngrnnnIvlt6blj7Plr7zmlbDjgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIuWIhuauteaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWIhuauteaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlpoLmnpzogIPlr7zmlbDlrprkuYnvvIzlhpnlh7ogbGltKGjihpIwKVtmKHgwK2gpLWYoeDApXS9o44CCXG4yLiDlkKvmoLnlvI/lhYjmnInnkIbljJbvvIzlkKvnu53lr7nlgLzmiJbliIbmrrXopoHliIblt6blj7PmnoHpmZDjgIJcbjMuIOWIhuauteeCueWPr+WvvOW/hemhu+WFiOi/nue7re+8jOWGjeavlOi+g+W3puWvvOaVsOWSjOWPs+WvvOaVsOOAglxuNC4g5rGC5Y+C5pWw6aKY6YCa5bi45YWI55Sx6L+e57ut5oCn5rGC5LiA5Liq5Y+C5pWw77yM5YaN55Sx5bem5Y+z5a+85pWw55u4562J5rGC5Y+m5LiA5Liq5Y+C5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5YiG55WM54K55rKh5Y2V54us5Yik5pat44CCXG7pmLLplJnvvJrkuKTovrnliIbliKvmsYLvvIww54K555yL5bem5Y+z5a+85pWw44CCIn0seyJpZCI6Ik0tMDAzLTA3IiwidGl0bGUiOiJNLTAwMy0wNyDlj43lh73mlbDlr7zmlbAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWPjeWHveaVsOWvvOaVsCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoiZih4KT0zeMKyLTIseD4w77yM5Y+N5Ye95pWwz4bvvIzmsYLPhuKAmSgxKSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuacquWFiOaJvmYoeDApPTHnmoR4MOOAgiIsImFuYWx5c2lzIjoiz4bigJkoeTApPTEvZuKAsih4MCnjgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIuWPjeWHveaVsOWvvOaVsCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWPjeWHveaVsOWvvOaVsFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDorr4geT1mKHgp77yM5YWI5LiN6KaB5oCl552A5Lqk5o2iIHjjgIF544CCXG4yLiDnlKjku6PmlbDlj5jlvaLmioogeCDnlKggeSDooajnpLrlh7rmnaXjgIJcbjMuIOS6pOaNoiB444CBee+8jOW+l+WIsOWPjeWHveaVsOihqOi+vuW8j+OAglxuNC4g5Y+N5Ye95pWw55qE5a6a5LmJ5Z+f5p2l6Ieq5Y6f5Ye95pWw55qE5YC85Z+f77yM5YC85Z+f5p2l6Ieq5Y6f5Ye95pWw55qE5a6a5LmJ5Z+f5ZKM5Y2V6LCD5Yy66Ze044CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5pyq5YWI5om+Zih4MCk9MeeahHgw44CCXG7pmLLplJnvvJrPhuKAmSh5MCk9MS9m4oCyKHgwKeOAgiJ9LHsiaWQiOiJNLTAwMy0wOCIsInRpdGxlIjoiTS0wMDMtMDgg5a+55pWw5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlr7nmlbDmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9KHgvKDEreCkpXnjnmoTlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiJ1KHgpXnYoeCnmnKrnlKjlr7nmlbDmsYLlr7zjgIIiLCJhbmFseXNpcyI6IuS4pOi+ueWPlmxu44CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLlr7nmlbDmsYLlr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlr7nmlbDmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJp1KHgpXnYoeCnmnKrnlKjlr7nmlbDmsYLlr7zjgIJcbumYsumUme+8muS4pOi+ueWPlmxu44CCIn0seyJpZCI6Ik0tMDAzLTA5IiwidGl0bGUiOiJNLTAwMy0wOSDlr7nmlbDmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWvueaVsOaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT3iiJpbKDN4LTIpLygoNS0yeCkoeC0xKSld55qE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5qC55byP5YiG5byP56Gs5rGC5a+85a+86Ie05re35Lmx44CCIiwiYW5hbHlzaXMiOiLlj5ZsbuaLhuaIkOWKoOWHj+OAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5a+55pWw5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5a+55pWw5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5qC55byP5YiG5byP56Gs5rGC5a+85a+86Ie05re35Lmx44CCXG7pmLLplJnvvJrlj5ZsbuaLhuaIkOWKoOWHj+OAgiJ9LHsiaWQiOiJNLTAwMy0xMCIsInRpdGxlIjoiTS0wMDMtMTAg5a+55pWw5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlr7nmlbDmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9wrPiiJpbeCh4wrIrMSkvKGVeeCh4wrIrNSkpXeeahOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6ImxuKGVeeCk9eOS4jeeGn+OAgiIsImFuYWx5c2lzIjoi5Y+WbG7mi4bkuZjpmaTmoLnjgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIuWvueaVsOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWvueaVsOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mmxuKGVeeCk9eOS4jeeGn+OAglxu6Ziy6ZSZ77ya5Y+WbG7mi4bkuZjpmaTmoLnjgIIifSx7ImlkIjoiTS0wMDMtMTEiLCJ0aXRsZSI6Ik0tMDAzLTExIOS5mOenry/lpI3lkIjmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS5mOenry/lpI3lkIjmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9WygxLXgpLygxK3gpXWVe4oiaeOWcqHg9NOWkhOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuW/mOiusOacgOWQjuS7o+WAvO+8m2Ve4oiaeOmTvuW8j+S4jeeGn+OAgiIsImFuYWx5c2lzIjoi5YWI5rGCeeKAme+8jOWGjeS7o3g9NOOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5LmY56evL+WkjeWQiOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS5mOenry/lpI3lkIjmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI55yL5pyA6YeM6Z2i55qE5ous5Y+377yM5oqK5YaF5bGC57uT5p6c5b2T5oiQ5pW05L2T44CCXG4yLiDoi6Xpopjnm67nu5kgZijmn5Dooajovr7lvI8p77yM5YWI5Luk5paw5Y+Y6YePIHQ95p+Q6KGo6L6+5byP77yM5Y+N6Kej5Y6f5Y+Y6YeP44CCXG4zLiDliIbmrrXlh73mlbDopoHlhYjliKTmlq3lhoXlsYLlh73mlbDlgLzokL3lnKjlk6rkuIDmrrXvvIzlho3ku6PlhaXlpJblsYLjgIJcbjQuIOWkmumHjeWkjeWQiOW/hemhu+S7juWGheWQkeWkluS4gOWxguS4gOWxgueul++8jOS4jeiDvei3s+atpeOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muW/mOiusOacgOWQjuS7o+WAvO+8m2Ve4oiaeOmTvuW8j+S4jeeGn+OAglxu6Ziy6ZSZ77ya5YWI5rGCeeKAme+8jOWGjeS7o3g9NOOAgiJ9LHsiaWQiOiJNLTAwMy0xMiIsInRpdGxlIjoiTS0wMDMtMTIg6auY6Zi25a+85pWwIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLpq5jpmLblr7zmlbAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuiuvnk9bG4oeC0xKe+8jOaxgnleKG4pIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5LiN5Lya5YaZ5YmN5Yeg6Zi25om+6KeE5b6L44CCIiwiYW5hbHlzaXMiOiLnrKblj7fjgIHpmLbkuZjjgIHluYLmrKHkuInpobnlvZLnurPjgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIumrmOmYtuWvvOaVsCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkemrmOmYtuWvvOaVsFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muS4jeS8muWGmeWJjeWHoOmYtuaJvuinhOW+i+OAglxu6Ziy6ZSZ77ya56ym5Y+344CB6Zi25LmY44CB5bmC5qyh5LiJ6aG55b2S57qz44CCIn0seyJpZCI6Ik0tMDAzLTEzIiwidGl0bGUiOiJNLTAwMy0xMyDkuozpmLblr7zmlbAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS6jOmYtuWvvOaVsCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoieT1jb3PCsnjCt2xueO+8jOaxgnnigJnigJkiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLkuZjnp6/lkozpk77lvI/msYLlr7zmvI/pobnjgIIiLCJhbmFseXNpcyI6Iihjb3PCsngp4oCZPS1zaW4yeOOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5LqM6Zi25a+85pWwIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5LqM6Zi25a+85pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LmY56ev5ZKM6ZO+5byP5rGC5a+85ryP6aG544CCXG7pmLLplJnvvJooY29zwrJ4KeKAmT0tc2luMnjjgIIifSx7ImlkIjoiTS0wMDMtMTQiLCJ0aXRsZSI6Ik0tMDAzLTE0IOeJueauiuaegemZkCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi54m55q6K5p6B6ZmQIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJsaW0oeOKGkjApW2VeKHjCsiktMS14wrJdL1t4wrNzaW54XSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iua3t+a3hmVedS0x5ZKMZV51LTEtdeOAgiIsImFuYWx5c2lzIjoiZV51LTEtdX51wrIvMuOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi54m55q6K5p6B6ZmQIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR54m55q6K5p6B6ZmQXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOWIpOaWreaegemZkOexu+Wei++8muebtOaOpeS7o+WFpeOAgTAvMOOAgeKIni/iiJ7jgIHml6DnqbflpKfph4/jgIHluYLmjIflnovmiJbmlbDliJflnovjgIJcbjIuIDAvMCDlnovkvJjlhYjogIPomZHnrYnku7fml6DnqbflsI/jgIHlm6DlvI/liIbop6PjgIHpgJrliIbjgIHmnInnkIbljJbmiJbmtJvlv4Xovr7jgIJcbjMuIOS4ieinkuaegemZkOiusOS9jyBzaW5heH5heOOAgXRhbmF4fmF444CBMS1jb3N4fnjCsi8y44CCXG40LiDluYLmjIflnovnu5/kuIDlhpnmiJAgZV575oyH5pWwwrdsbuW6leaVsH3vvIzlhYjmsYLmjIfmlbDkuIrnmoTmnoHpmZDjgIJcbjUuIOaVsOWIl+WIhuW8j+eci+acgOmrmOasoe+8m+aMh+aVsOWei+WFiOavlOi+g+acgOWkp+W6leaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mua3t+a3hmVedS0x5ZKMZV51LTEtdeOAglxu6Ziy6ZSZ77yaZV51LTEtdX51wrIvMuOAgiJ9LHsiaWQiOiJNLTAwMy0xNSIsInRpdGxlIjoiTS0wMDMtMTUg5bmC5oyH5Z6L5p6B6ZmQIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLluYLmjIflnovmnoHpmZAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6ImxpbSh44oaSMCspeF4odGFueCkiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiIwXjDlnovkuI3kvJrovazljJbjgIIiLCJhbmFseXNpcyI6IuWGmeaIkGVee3RhbnjCt2xueH3jgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIuW5guaMh+Wei+aegemZkCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeW5guaMh+Wei+aegemZkFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDov5nmmK8gMF4wIOWei++8jOWFiOWPluaMh+aVsOWMlu+8mnheKHRhbngpPWVee3RhbnjCt2xueH3jgIJcbjIuIHjihpIwKyDml7bvvIx0YW54fnjjgIJcbjMuIOaJgOS7pSB0YW54wrdsbnggfiB4bG5444CCXG40LiB44oaSMCsg5pe2IHhsbnjihpIw44CCXG41LiDlm6DmraTlpJblsYLmnoHpmZDkuLogZV4w44CCXG7jgJDmraPnoa7nrZTmoYjjgJEx44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mjBeMOWei+S4jeS8mui9rOWMluOAglxu6Ziy6ZSZ77ya5YaZ5oiQZV57dGFueMK3bG54feOAgiJ9LHsiaWQiOiJNLTAwMy0xNiIsInRpdGxlIjoiTS0wMDMtMTYg5Y+C5pWw5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlj4LmlbDmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWPguaVsOaWueeoi3g9bG7iiJooMSt0wrIpLHk9YXJjdGFudO+8jOaxgmR5L2R4Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5pyq5YyW566AeCh0Ke+8jOacquebuOmZpOOAgiIsImFuYWx5c2lzIjoibG7iiJpBPTEvMmxuQe+8jGR5L2R4PShkeS9kdCkvKGR4L2R0KeOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5Y+C5pWw5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Y+C5pWw5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIHg9bG7iiJooMSt0wrIpPTEvMiBsbigxK3TCsinjgIJcbjIuIGR4L2R0PXQvKDErdMKyKeOAglxuMy4geT1hcmN0YW5077yM5omA5LulIGR5L2R0PTEvKDErdMKyKeOAglxuNC4gZHkvZHg9KGR5L2R0KS8oZHgvZHQpPVsxLygxK3TCsildL1t0LygxK3TCsildPTEvdOOAglxu44CQ5q2j56Gu562U5qGI44CRZHkvZHg9MS9044CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muacquWMlueugHgodCnvvIzmnKrnm7jpmaTjgIJcbumYsumUme+8mmxu4oiaQT0xLzJsbkHvvIxkeS9keD0oZHkvZHQpLyhkeC9kdCnjgIIifSx7ImlkIjoiTS0wMDMtMTciLCJ0aXRsZSI6Ik0tMDAzLTE3IOerluebtOWIh+e6vyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi56uW55u05YiH57q/Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYLmm7Lnur95PeKIm3jlnKgoMCwwKeWkhOWIh+e6v+aWueeoiyIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWvvOaVsOaXoOept+aDheW9ouS4jeeGn+OAgiIsImFuYWx5c2lzIjoi5a+85pWw6LaL5peg56m35pe25Y+v6IO95piveD3luLjmlbDjgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIuerluebtOWIh+e6vyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeerluebtOWIh+e6v1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnoa7lrprliIfngrnvvJvpopjnm67or7TigJzov4fmn5DngrnigJ3ml7bvvIzov5nkuKrngrnkuI3kuIDlrprmmK/liIfngrnjgIJcbjIuIOeUqOWvvOaVsOaxguWIh+e6v+aWnOeOhyBrPWYnKHgwKeOAglxuMy4g5YiH57q/5pa556iL5YaZIHkteTA9ayh4LXgwKeOAglxuNC4g5rOV57q/5pac546H5pivIC0xL2vvvJvoi6Ugaz0wIOaIluS4jeWtmOWcqO+8jOimgeWNleeLrOiuqOiuuuawtOW5sy/nq5bnm7Tmg4XlhrXjgIJcbjUuIOS4pOabsue6v+ebuOWIh+imgeWQjOaXtua7oei2s+WHveaVsOWAvOebuOetieWSjOWvvOaVsOWAvOebuOetieOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muWvvOaVsOaXoOept+aDheW9ouS4jeeGn+OAglxu6Ziy6ZSZ77ya5a+85pWw6LaL5peg56m35pe25Y+v6IO95piveD3luLjmlbDjgIIifSx7ImlkIjoiTS0wMDMtMTgiLCJ0aXRsZSI6Ik0tMDAzLTE4IOWIh+e6v+W5s+ihjCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5YiH57q/5bmz6KGMIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJ5PXjCsy145ZyoTeeCueWIh+e6v+W5s+ihjOS6jngreT0x77yM5rGCTSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuayoeaKiuebtOe6v+WMluaWnOeOh+OAgiIsImFuYWx5c2lzIjoi5bmz6KGM5YiZ5a+85pWwPeebtOe6v+aWnOeOh+OAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5YiH57q/5bmz6KGMIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5YiH57q/5bmz6KGMXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOehruWumuWIh+eCue+8m+mimOebruivtOKAnOi/h+afkOeCueKAneaXtu+8jOi/meS4queCueS4jeS4gOWumuaYr+WIh+eCueOAglxuMi4g55So5a+85pWw5rGC5YiH57q/5pac546HIGs9ZicoeDAp44CCXG4zLiDliIfnur/mlrnnqIvlhpkgeS15MD1rKHgteDAp44CCXG40LiDms5Xnur/mlpznjofmmK8gLTEva++8m+iLpSBrPTAg5oiW5LiN5a2Y5Zyo77yM6KaB5Y2V54us6K6o6K665rC05bmzL+erluebtOaDheWGteOAglxuNS4g5Lik5puy57q/55u45YiH6KaB5ZCM5pe25ruh6Laz5Ye95pWw5YC855u4562J5ZKM5a+85pWw5YC855u4562J44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5rKh5oqK55u057q/5YyW5pac546H44CCXG7pmLLplJnvvJrlubPooYzliJnlr7zmlbA955u057q/5pac546H44CCIn0seyJpZCI6Ik0tMDAzLTE5IiwidGl0bGUiOiJNLTAwMy0xOSDnm7jliIciLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuebuOWIhyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoieT1h4oiaeOS4jnk9bG5455u45YiH77yM5rGCYSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iua8j+WvvOaVsOebuOetieadoeS7tuOAgiIsImFuYWx5c2lzIjoi5YWx54K5K+WFseaWnOeOh+OAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi55u45YiHIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Lik5puy57q/55u45YiH5rGC5Y+C5pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOiuvuWIh+eCueaoquWdkOagh+S4uiB44oKAPjDjgIJcbjIuIOWHveaVsOWAvOebuOetie+8mmHiiJp44oKAPWxueOKCgOOAglxuMy4g5a+85pWw55u4562J77yaYS8oMuKImnjigoApPTEveOKCgOOAglxuNC4g55Sx5a+85pWw55u4562J5b6XIGE9Mi/iiJp44oKA44CCXG41LiDku6PlhaXlh73mlbDlgLznm7jnrYnvvJoyPWxueOKCgO+8jOaJgOS7pSB44oKAPWXCsuOAglxuNi4gYT0yL2XjgIJcbuOAkOato+ehruetlOahiOOAkWE9Mi9l44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mua8j+WvvOaVsOebuOetieadoeS7tuOAglxu6Ziy6ZSZ77ya5YWx54K5K+WFseaWnOeOh+OAgiJ9LHsiaWQiOiJNLTAwMy0yMCIsInRpdGxlIjoiTS0wMDMtMjAg5ZWG5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLllYbmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9KDEt4oiaeCkvKDEr4oiaeCnnmoTlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmoLnlvI/nrKblj7fkuI7llYblhazlvI/mt7fkubHjgIIiLCJhbmFseXNpcyI6IuiuvnUsduWll+WVhuWFrOW8j+OAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5ZWG5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5ZWG5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5qC55byP56ym5Y+35LiO5ZWG5YWs5byP5re35Lmx44CCXG7pmLLplJnvvJrorr51LHblpZfllYblhazlvI/jgIIifSx7ImlkIjoiTS0wMDMtMjEiLCJ0aXRsZSI6Ik0tMDAzLTIxIOmTvuW8j+axguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi6ZO+5byP5rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTMvKDUteCkreMKyLzXnmoTlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmvI/kuZgoNS14KeKAmeOAgiIsImFuYWx5c2lzIjoiWzEvdV3igJk9LXXigJkvdcKy44CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLpk77lvI/msYLlr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHpk77lvI/msYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmvI/kuZgoNS14KeKAmeOAglxu6Ziy6ZSZ77yaWzEvdV3igJk9LXXigJkvdcKy44CCIn0seyJpZCI6Ik0tMDAzLTIyIiwidGl0bGUiOiJNLTAwMy0yMiDluYLlh73mlbAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuW5guWHveaVsCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT0xL3gtMuKImngreF4oMy8yKeeahOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWIhuaVsOW5gui9rOaNouS4jeeGn+OAgiIsImFuYWx5c2lzIjoi5YyW5oiQeF5h5rGC5a+844CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLluYLlh73mlbAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHluYLlh73mlbBcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5qCH5Ye66aKY55uu6ICD54K55ZKM5bey55+l5p2h5Lu244CCXG4yLiDlhpnlh7rmnKzpopjopoHnlKjnmoTlhazlvI/miJblrprnkIbjgIJcbjMuIOaMieWFrOW8j+S7o+WFpeW5tuaVtOeQhu+8jOazqOaEj+WumuS5ieWfn+OAgeerr+eCueOAgeW3puWPs+aegemZkOaIluWPguaVsOiMg+WbtOOAglxuNC4g5pyA5ZCO5Zue5Yiw6aKY55uu6Zeu6aKY77yM5YaZ5riF5qWa562U5qGI5oiW6K+B5piO57uT6K6644CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5YiG5pWw5bmC6L2s5o2i5LiN54af44CCXG7pmLLplJnvvJrljJbmiJB4XmHmsYLlr7zjgIIifSx7ImlkIjoiTS0wMDMtMjMiLCJ0aXRsZSI6Ik0tMDAzLTIzIOS5mOenr+axguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5LmY56ev5rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTJeeMK3eMKy55qE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5b+Y6K6wKGFeeCnigJk9YV54bG5h44CCIiwiYW5hbHlzaXMiOiLkuZjnp6/kuKTpobnpg73msYLjgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIuS5mOenr+axguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS5mOenryArIOaMh+aVsOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDmioogeT0yXnjCt3jCsiDnnIvmiJDkuKTkuKrlh73mlbDnm7jkuZjjgIJcbjIuICgyXngpJz0yXnggbG4y77yMKHjCsiknPTJ444CCXG4zLiDnlKjkuZjnp6/msYLlr7zvvJp5Jz0oMl54KSd4wrIrMl54KHjCsikn44CCXG40LiDmlbTnkIblvpcgeSc9Ml54KHjCsmxuMisyeCnjgIJcbuOAkOato+ehruetlOahiOOAkXknPTJeeCh4wrJsbjIrMngp44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muW/mOiusChhXngp4oCZPWFeeGxuYeOAglxu6Ziy6ZSZ77ya5LmY56ev5Lik6aG56YO95rGC44CCIn0seyJpZCI6Ik0tMDAzLTI0IiwidGl0bGUiOiJNLTAwMy0yNCDllYbmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWVhuaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT0oeCsxKS8oeC0yKeeahOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iua8j+WIhuavjeW5s+aWueOAgiIsImFuYWx5c2lzIjoi5ZWG5YWs5byP5Zu65a6a5YaZ44CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLllYbmsYLlr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHllYbmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmvI/liIbmr43lubPmlrnjgIJcbumYsumUme+8muWVhuWFrOW8j+WbuuWumuWGmeOAgiJ9LHsiaWQiOiJNLTAwMy0yNSIsInRpdGxlIjoiTS0wMDMtMjUg5aSN5ZCI5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlpI3lkIjmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9MS8oMSviiJp4KSsxLygxLeKImngp55qE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5ryP4oiaeOWvvOaVsOOAgiIsImFuYWx5c2lzIjoi5oqKMcKx4oiaeOeci+aVtOS9k+OAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5aSN5ZCI5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5aSN5ZCI5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOeci+acgOmHjOmdoueahOaLrOWPt++8jOaKiuWGheWxgue7k+aenOW9k+aIkOaVtOS9k+OAglxuMi4g6Iul6aKY55uu57uZIGYo5p+Q6KGo6L6+5byPKe+8jOWFiOS7pOaWsOWPmOmHjyB0PeafkOihqOi+vuW8j++8jOWPjeino+WOn+WPmOmHj+OAglxuMy4g5YiG5q615Ye95pWw6KaB5YWI5Yik5pat5YaF5bGC5Ye95pWw5YC86JC95Zyo5ZOq5LiA5q6177yM5YaN5Luj5YWl5aSW5bGC44CCXG40LiDlpJrph43lpI3lkIjlv4Xpobvku47lhoXlkJHlpJbkuIDlsYLkuIDlsYLnrpfvvIzkuI3og73ot7PmraXjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmvI/iiJp45a+85pWw44CCXG7pmLLplJnvvJrmiooxwrHiiJp455yL5pW05L2T44CCIn0seyJpZCI6Ik0tMDAzLTI2IiwidGl0bGUiOiJNLTAwMy0yNiDkuInop5LllYbmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS4ieinkuWVhuaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT0oMStjb3N4KS8oMS1jb3N4KeeahOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IjEtY29zeOaxguWvvOespuWPt+mUmeOAgiIsImFuYWx5c2lzIjoiKDEtY29zeCnigJk9c2lueOOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5LiJ6KeS5ZWG5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5LiJ6KeS5ZWG5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77yaMS1jb3N45rGC5a+856ym5Y+36ZSZ44CCXG7pmLLplJnvvJooMS1jb3N4KeKAmT1zaW5444CCIn0seyJpZCI6Ik0tMDAzLTI3IiwidGl0bGUiOiJNLTAwMy0yNyDkuInop5LllYbmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS4ieinkuWVhuaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT1zaW54LygxK2Nvc3gp55qE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5ZWG5YWs5byP5LiO5LiJ6KeS5a+85pWw5re344CCIiwiYW5hbHlzaXMiOiJzaW7igJk9Y29z77yMKDErY29zKeKAmT0tc2lu44CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLkuInop5LllYbmsYLlr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHkuInop5LllYbmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrllYblhazlvI/kuI7kuInop5Llr7zmlbDmt7fjgIJcbumYsumUme+8mnNpbuKAmT1jb3PvvIwoMStjb3Mp4oCZPS1zaW7jgIIifSx7ImlkIjoiTS0wMDMtMjgiLCJ0aXRsZSI6Ik0tMDAzLTI4IOS5mOenryvkuInop5IiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS5mOenryvkuInop5IiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9eHRhbngrc2VjeC0x55qE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoic2Vj5a+85pWw5LiN54af44CCIiwiYW5hbHlzaXMiOiIoc2VjeCnigJk9c2VjeCB0YW5444CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLkuZjnp68r5LiJ6KeSIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5LmY56evK+S4ieinklxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mnNlY+WvvOaVsOS4jeeGn+OAglxu6Ziy6ZSZ77yaKHNlY3gp4oCZPXNlY3ggdGFueOOAgiJ9LHsiaWQiOiJNLTAwMy0yOSIsInRpdGxlIjoiTS0wMDMtMjkg5Y+N5LiJ6KeSIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlj43kuInop5IiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9YXJjY29zKDEveCnnmoTlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiJhcmNjb3PlhazlvI/lkozpk77lvI/mvI/kuZjjgIIiLCJhbmFseXNpcyI6IihhcmNjb3N1KeKAmT0tdeKAmS/iiJooMS11wrIp44CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLlj43kuInop5IiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlj43kuInop5JcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJphcmNjb3PlhazlvI/lkozpk77lvI/mvI/kuZjjgIJcbumYsumUme+8mihhcmNjb3N1KeKAmT0tdeKAmS/iiJooMS11wrIp44CCIn0seyJpZCI6Ik0tMDAzLTMwIiwidGl0bGUiOiJNLTAwMy0zMCDlj43kuInop5Ir5ZWGIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlj43kuInop5Ir5ZWGIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PWFyY3RhbigoeCsxKS8oeC0xKSnnmoTlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmnKrlhYjorr5144CCIiwiYW5hbHlzaXMiOiJhcmN0YW515a+85pWwPXXigJkvKDErdcKyKeOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5Y+N5LiJ6KeSK+WVhiJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWPjeS4ieinkivllYZcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmnKrlhYjorr5144CCXG7pmLLplJnvvJphcmN0YW515a+85pWwPXXigJkvKDErdcKyKeOAgiJ9LHsiaWQiOiJNLTAwMy0zMSIsInRpdGxlIjoiTS0wMDMtMzEg5aSa6YeN5aSN5ZCIIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlpJrph43lpI3lkIgiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9Y29zW2YoMS94KV3nmoTlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLlpJbkuK3lhoXlsYLmvI/kuZjjgIIiLCJhbmFseXNpcyI6IumAkOWxgumTvuW8j+OAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5aSa6YeN5aSN5ZCIIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5aSa6YeN5aSN5ZCIXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOeci+acgOmHjOmdoueahOaLrOWPt++8jOaKiuWGheWxgue7k+aenOW9k+aIkOaVtOS9k+OAglxuMi4g6Iul6aKY55uu57uZIGYo5p+Q6KGo6L6+5byPKe+8jOWFiOS7pOaWsOWPmOmHjyB0PeafkOihqOi+vuW8j++8jOWPjeino+WOn+WPmOmHj+OAglxuMy4g5YiG5q615Ye95pWw6KaB5YWI5Yik5pat5YaF5bGC5Ye95pWw5YC86JC95Zyo5ZOq5LiA5q6177yM5YaN5Luj5YWl5aSW5bGC44CCXG40LiDlpJrph43lpI3lkIjlv4Xpobvku47lhoXlkJHlpJbkuIDlsYLkuIDlsYLnrpfvvIzkuI3og73ot7PmraXjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlpJbkuK3lhoXlsYLmvI/kuZjjgIJcbumYsumUme+8mumAkOWxgumTvuW8j+OAgiJ9LHsiaWQiOiJNLTAwMy0zMiIsInRpdGxlIjoiTS0wMDMtMzIg5LmY56evK+WkjeWQiCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5LmY56evK+WkjeWQiCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT1mKGVeKHjCsikpc2lueOeahOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWPquaxguS4gOWNiuOAgiIsImFuYWx5c2lzIjoi5LmY56ev5rGC5a+8K2VeKHjCsinpk77lvI/jgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIuS5mOenryvlpI3lkIgiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHkuZjnp68r5aSN5ZCIXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOeci+acgOmHjOmdoueahOaLrOWPt++8jOaKiuWGheWxgue7k+aenOW9k+aIkOaVtOS9k+OAglxuMi4g6Iul6aKY55uu57uZIGYo5p+Q6KGo6L6+5byPKe+8jOWFiOS7pOaWsOWPmOmHjyB0PeafkOihqOi+vuW8j++8jOWPjeino+WOn+WPmOmHj+OAglxuMy4g5YiG5q615Ye95pWw6KaB5YWI5Yik5pat5YaF5bGC5Ye95pWw5YC86JC95Zyo5ZOq5LiA5q6177yM5YaN5Luj5YWl5aSW5bGC44CCXG40LiDlpJrph43lpI3lkIjlv4Xpobvku47lhoXlkJHlpJbkuIDlsYLkuIDlsYLnrpfvvIzkuI3og73ot7PmraXjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlj6rmsYLkuIDljYrjgIJcbumYsumUme+8muS5mOenr+axguWvvCtlXih4wrIp6ZO+5byP44CCIn0seyJpZCI6Ik0tMDAzLTMzIiwidGl0bGUiOiJNLTAwMy0zMyDnu7zlkIjmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6Iue7vOWQiOaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT3iiJooNC14wrIpK3jCt2FyY3Npbih4LzIp55qE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5qC55byP44CB5LmY56ev44CB5Y+N5LiJ6KeS5re35Lmx44CCIiwiYW5hbHlzaXMiOiLliIbpobnpgJDpobnmsYLjgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIue7vOWQiOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkee7vOWQiOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muagueW8j+OAgeS5mOenr+OAgeWPjeS4ieinkua3t+S5seOAglxu6Ziy6ZSZ77ya5YiG6aG56YCQ6aG55rGC44CCIn0seyJpZCI6Ik0tMDAzLTM0IiwidGl0bGUiOiJNLTAwMy0zNCDmjIflrprngrnlr7zmlbAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuaMh+WumueCueWvvOaVsCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT1lXnggYXJjdGFuKGVeeCktbG7iiJooMStlXigyeCkp5ZyoMOWkhOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuW/mOiusOS7o3g9MOOAgiIsImFuYWx5c2lzIjoi5YWI5rGCeeKAme+8jOWGjeS7o+WAvOOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5oyH5a6a54K55a+85pWwIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5oyH5a6a54K55a+85pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWvuSBlXnggYXJjdGFuKGVeeCkg55So5LmY56ev5ZKM6ZO+5byP5rGC5a+844CCXG4yLiDlr7zmlbDkuLogZV54IGFyY3RhbihlXngpK2VeeMK3ZV54LygxK2VeKDJ4KSnjgIJcbjMuIOWvuSBsbuKImigxK2VeKDJ4KSkg5YaZ5oiQIDEvMiBsbigxK2VeKDJ4KSnvvIzlr7zmlbDkuLogZV4oMngpLygxK2VeKDJ4KSnjgIJcbjQuIOS7oyB4PTDvvJrnrKzkuIDpg6jliIbkuLogz4AvNCsxLzLvvIznrKzkuozpg6jliIbkuLogMS8y44CCXG41LiDnm7jlh4/lvpcgz4AvNOOAglxu44CQ5q2j56Gu562U5qGI44CR5ZyoIDAg5aSE5a+85pWw5Li6IM+ALzTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5b+Y6K6w5LujeD0w44CCXG7pmLLplJnvvJrlhYjmsYJ54oCZ77yM5YaN5Luj5YC844CCIn0seyJpZCI6Ik0tMDAzLTM1IiwidGl0bGUiOiJNLTAwMy0zNSDlr7nmlbAr5Y+N5LiJ6KeSIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlr7nmlbAr5Y+N5LiJ6KeSIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTEvNGxuKCgxK3gpLygxLXgpKS0xLzJhcmN0YW5455qE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5LiN5Lya5ouGbG7llYbjgIIiLCJhbmFseXNpcyI6ImxuKEEvQik9bG5BLWxuQuOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5a+55pWwK+WPjeS4ieinkiJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWvueaVsCvlj43kuInop5JcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrkuI3kvJrmi4ZsbuWVhuOAglxu6Ziy6ZSZ77yabG4oQS9CKT1sbkEtbG5C44CCIn0seyJpZCI6Ik0tMDAzLTM2IiwidGl0bGUiOiJNLTAwMy0zNiDkuZjnp68r5aSN5ZCIK+WVhiIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5LmY56evK+WkjeWQiCvllYYiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9eMKyc2luKDEveCkrMngvKDEteMKyKeeahOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6InNpbigxL3gp5ryP5YaF5bGC44CCIiwiYW5hbHlzaXMiOiLpk77lvI8r5ZWG5YWs5byP44CCIiwidGFncyI6WyJNLTAwMyIsIuWIh+e6v+OAgeebuOWIh+OAgeWPguaVsOaWueeoi+OAgeWvvOaVsOi/m+mYtig0MOmimCkiLCLkuZjnp68r5aSN5ZCIK+WVhiJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS5mOenryvlpI3lkIgr5ZWGXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOeci+acgOmHjOmdoueahOaLrOWPt++8jOaKiuWGheWxgue7k+aenOW9k+aIkOaVtOS9k+OAglxuMi4g6Iul6aKY55uu57uZIGYo5p+Q6KGo6L6+5byPKe+8jOWFiOS7pOaWsOWPmOmHjyB0PeafkOihqOi+vuW8j++8jOWPjeino+WOn+WPmOmHj+OAglxuMy4g5YiG5q615Ye95pWw6KaB5YWI5Yik5pat5YaF5bGC5Ye95pWw5YC86JC95Zyo5ZOq5LiA5q6177yM5YaN5Luj5YWl5aSW5bGC44CCXG40LiDlpJrph43lpI3lkIjlv4Xpobvku47lhoXlkJHlpJbkuIDlsYLkuIDlsYLnrpfvvIzkuI3og73ot7PmraXjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJpzaW4oMS94Kea8j+WGheWxguOAglxu6Ziy6ZSZ77ya6ZO+5byPK+WVhuWFrOW8j+OAgiJ9LHsiaWQiOiJNLTAwMy0zNyIsInRpdGxlIjoiTS0wMDMtMzcg5YiG5q615rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLliIbmrrXmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIhuautWY9e3jCsnNpbigxL3gpLHjiiaAwOzAseD0wfeaxguWvvCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IjDngrnmsqHnlKjlrprkuYnjgIIiLCJhbmFseXNpcyI6IuWIhueVjOeCueWNleeLrOeUqOWvvOaVsOWumuS5ieOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5YiG5q615rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5YiG5q615rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWmguaenOiAg+WvvOaVsOWumuS5ie+8jOWGmeWHuiBsaW0oaOKGkjApW2YoeDAraCktZih4MCldL2jjgIJcbjIuIOWQq+agueW8j+WFiOacieeQhuWMlu+8jOWQq+e7neWvueWAvOaIluWIhuauteimgeWIhuW3puWPs+aegemZkOOAglxuMy4g5YiG5q6154K55Y+v5a+85b+F6aG75YWI6L+e57ut77yM5YaN5q+U6L6D5bem5a+85pWw5ZKM5Y+z5a+85pWw44CCXG40LiDmsYLlj4LmlbDpopjpgJrluLjlhYjnlLHov57nu63mgKfmsYLkuIDkuKrlj4LmlbDvvIzlho3nlLHlt6blj7Plr7zmlbDnm7jnrYnmsYLlj6bkuIDkuKrlj4LmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJow54K55rKh55So5a6a5LmJ44CCXG7pmLLplJnvvJrliIbnlYzngrnljZXni6znlKjlr7zmlbDlrprkuYnjgIIifSx7ImlkIjoiTS0wMDMtMzgiLCJ0aXRsZSI6Ik0tMDAzLTM4IOWIhuauteWPr+WvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5YiG5q615Y+v5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLliIbmrrVmPXtzaW54LHg8MDtsbigxK3gpLHjiiaUwfeaxguWvvCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuayoeavlOi+gzDlpITlt6blj7Plr7zmlbDjgIIiLCJhbmFseXNpcyI6IuW3puWPs+WvvOaVsOebuOetieaJjeWPr+WvvOOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi5YiG5q615Y+v5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5YiG5q615Y+v5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWmguaenOiAg+WvvOaVsOWumuS5ie+8jOWGmeWHuiBsaW0oaOKGkjApW2YoeDAraCktZih4MCldL2jjgIJcbjIuIOWQq+agueW8j+WFiOacieeQhuWMlu+8jOWQq+e7neWvueWAvOaIluWIhuauteimgeWIhuW3puWPs+aegemZkOOAglxuMy4g5YiG5q6154K55Y+v5a+85b+F6aG75YWI6L+e57ut77yM5YaN5q+U6L6D5bem5a+85pWw5ZKM5Y+z5a+85pWw44CCXG40LiDmsYLlj4LmlbDpopjpgJrluLjlhYjnlLHov57nu63mgKfmsYLkuIDkuKrlj4LmlbDvvIzlho3nlLHlt6blj7Plr7zmlbDnm7jnrYnmsYLlj6bkuIDkuKrlj4LmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmsqHmr5TovoMw5aSE5bem5Y+z5a+85pWw44CCXG7pmLLplJnvvJrlt6blj7Plr7zmlbDnm7jnrYnmiY3lj6/lr7zjgIIifSx7ImlkIjoiTS0wMDMtMzkiLCJ0aXRsZSI6Ik0tMDAzLTM5IOWkjeadguWkjeWQiCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5aSN5p2C5aSN5ZCIIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJ5PWFeeCviiJooMS1hXigyeCkpwrdhcmNjb3MoYV54KeaxguWvvCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuaMh+aVsOOAgeagueW8j+OAgeWPjeS4ieinkuWxguasoeS5seOAgiIsImFuYWx5c2lzIjoi5YiG6aG577yM6K6+dT1hXnjjgIIiLCJ0YWdzIjpbIk0tMDAzIiwi5YiH57q/44CB55u45YiH44CB5Y+C5pWw5pa556iL44CB5a+85pWw6L+b6Zi2KDQw6aKYKSIsIuWkjeadguWkjeWQiCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWkjeadguWkjeWQiFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnnIvmnIDph4zpnaLnmoTmi6zlj7fvvIzmiorlhoXlsYLnu5PmnpzlvZPmiJDmlbTkvZPjgIJcbjIuIOiLpemimOebrue7mSBmKOafkOihqOi+vuW8jynvvIzlhYjku6TmlrDlj5jph48gdD3mn5Dooajovr7lvI/vvIzlj43op6Pljp/lj5jph4/jgIJcbjMuIOWIhuauteWHveaVsOimgeWFiOWIpOaWreWGheWxguWHveaVsOWAvOiQveWcqOWTquS4gOaute+8jOWGjeS7o+WFpeWkluWxguOAglxuNC4g5aSa6YeN5aSN5ZCI5b+F6aG75LuO5YaF5ZCR5aSW5LiA5bGC5LiA5bGC566X77yM5LiN6IO96Lez5q2l44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5oyH5pWw44CB5qC55byP44CB5Y+N5LiJ6KeS5bGC5qyh5Lmx44CCXG7pmLLplJnvvJrliIbpobnvvIzorr51PWFeeOOAgiJ9LHsiaWQiOiJNLTAwMy00MCIsInRpdGxlIjoiTS0wMDMtNDAg57u85ZCI5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLnu7zlkIjmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Ink9KHgvMiniiJooYcKyLXjCsikrKGHCsi8yKWFyY3Npbih4L2Ep77yM5rGCeeKAmSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuS5mOenr+OAgeagueW8j+OAgeWPjeS4ieinkua8j+mhueOAgiIsImFuYWx5c2lzIjoi5YiG5Lik6YOo5YiG5YiG5Yir5rGC5a+844CCIOS6jOWIt+mhuuW6j++8muWFiOWIt+aZrumAmuaxguWvvOKGkuWkjeWQiOaxguWvvOKGkuWvueaVsOaxguWvvOKGkumrmOmYtuWvvOKGkueJueauiuaegemZkOOAgiIsInRhZ3MiOlsiTS0wMDMiLCLliIfnur/jgIHnm7jliIfjgIHlj4LmlbDmlrnnqIvjgIHlr7zmlbDov5vpmLYoNDDpopgpIiwi57u85ZCI5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR57u85ZCI5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LmY56ev44CB5qC55byP44CB5Y+N5LiJ6KeS5ryP6aG544CCXG7pmLLplJnvvJrliIbkuKTpg6jliIbliIbliKvmsYLlr7zjgIIg5LqM5Yi36aG65bqP77ya5YWI5Yi35pmu6YCa5rGC5a+84oaS5aSN5ZCI5rGC5a+84oaS5a+55pWw5rGC5a+84oaS6auY6Zi25a+84oaS54m55q6K5p6B6ZmQ44CCIn0seyJpZCI6Ik0tMDA0LTAxIiwidGl0bGUiOiJNLTAwNC0wMSDllYbmsYLlr7wr5qC55byPIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLllYbmsYLlr7wr5qC55byPIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYLlh73mlbAgeT14LygxK+KImngpIOeahOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWVhuWFrOW8j+S4jeeGn+OAgiIsImFuYWx5c2lzIjoi6K6+dT14LHY9MSviiJp444CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLllYbmsYLlr7wr5qC55byPIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5ZWG5rGC5a+8K+agueW8j1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muWVhuWFrOW8j+S4jeeGn+OAglxu6Ziy6ZSZ77ya6K6+dT14LHY9MSviiJp444CCIn0seyJpZCI6Ik0tMDA0LTAyIiwidGl0bGUiOiJNLTAwNC0wMiDlpI3lkIjmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWkjeWQiOaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGC5ZCr5qC55byP44CB5YiG5byP44CB5oyH5pWw5byP55qE5Ye95pWw5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5YaF5aSW5bGC5LiN5riF44CCIiwiYW5hbHlzaXMiOiLlhYjlpJblsYLlho3lhoXlsYLjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWkjeWQiOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWkjeWQiOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnnIvmnIDph4zpnaLnmoTmi6zlj7fvvIzmiorlhoXlsYLnu5PmnpzlvZPmiJDmlbTkvZPjgIJcbjIuIOiLpemimOebrue7mSBmKOafkOihqOi+vuW8jynvvIzlhYjku6TmlrDlj5jph48gdD3mn5Dooajovr7lvI/vvIzlj43op6Pljp/lj5jph4/jgIJcbjMuIOWIhuauteWHveaVsOimgeWFiOWIpOaWreWGheWxguWHveaVsOWAvOiQveWcqOWTquS4gOaute+8jOWGjeS7o+WFpeWkluWxguOAglxuNC4g5aSa6YeN5aSN5ZCI5b+F6aG75LuO5YaF5ZCR5aSW5LiA5bGC5LiA5bGC566X77yM5LiN6IO96Lez5q2l44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5YaF5aSW5bGC5LiN5riF44CCXG7pmLLplJnvvJrlhYjlpJblsYLlho3lhoXlsYLjgIIifSx7ImlkIjoiTS0wMDQtMDMiLCJ0aXRsZSI6Ik0tMDA0LTAzIOWPjeWHveaVsOWvvOaVsCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5Y+N5Ye95pWw5a+85pWwIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLlt7Lnn6Xlj43lh73mlbDPhih4Ke+8jOaxgs+G4oCZKGEpIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi55u05o6l5LujYe+8jOS4jeaJvuWOn+WDj+OAgiIsImFuYWx5c2lzIjoi5YWI6KejZih4MCk9YeOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5Y+N5Ye95pWw5a+85pWwIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Y+N5Ye95pWw5a+85pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOiuviB5PWYoeCnvvIzlhYjkuI3opoHmgKXnnYDkuqTmjaIgeOOAgXnjgIJcbjIuIOeUqOS7o+aVsOWPmOW9ouaKiiB4IOeUqCB5IOihqOekuuWHuuadpeOAglxuMy4g5Lqk5o2iIHjjgIF577yM5b6X5Yiw5Y+N5Ye95pWw6KGo6L6+5byP44CCXG40LiDlj43lh73mlbDnmoTlrprkuYnln5/mnaXoh6rljp/lh73mlbDnmoTlgLzln5/vvIzlgLzln5/mnaXoh6rljp/lh73mlbDnmoTlrprkuYnln5/lkozljZXosIPljLrpl7TjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrnm7TmjqXku6Nh77yM5LiN5om+5Y6f5YOP44CCXG7pmLLplJnvvJrlhYjop6NmKHgwKT1h44CCIn0seyJpZCI6Ik0tMDA0LTA0IiwidGl0bGUiOiJNLTAwNC0wNCDlj43lh73mlbDlr7zmlbAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWPjeWHveaVsOWvvOaVsCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoiZih4KT0zeMKyLTIseD4w77yM5Y+N5Ye95pWwz4bvvIzmsYLPhuKAmSgxKSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWFrOW8j+S4jeeGn+OAgiIsImFuYWx5c2lzIjoiz4bigJkoMSk9MS9m4oCyKDEp44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLlj43lh73mlbDlr7zmlbAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlj43lh73mlbDlr7zmlbBcbuOAkOino+mimOatpemqpOOAkVxuMS4g6K6+IHk9Zih4Ke+8jOWFiOS4jeimgeaApeedgOS6pOaNoiB444CBeeOAglxuMi4g55So5Luj5pWw5Y+Y5b2i5oqKIHgg55SoIHkg6KGo56S65Ye65p2l44CCXG4zLiDkuqTmjaIgeOOAgXnvvIzlvpfliLDlj43lh73mlbDooajovr7lvI/jgIJcbjQuIOWPjeWHveaVsOeahOWumuS5ieWfn+adpeiHquWOn+WHveaVsOeahOWAvOWfn++8jOWAvOWfn+adpeiHquWOn+WHveaVsOeahOWumuS5ieWfn+WSjOWNleiwg+WMuumXtOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muWFrOW8j+S4jeeGn+OAglxu6Ziy6ZSZ77yaz4bigJkoMSk9MS9m4oCyKDEp44CCIn0seyJpZCI6Ik0tMDA0LTA1IiwidGl0bGUiOiJNLTAwNC0wNSDlj4LmlbDmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWPguaVsOaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5Y+C5pWw5pa556iL5rGCZHkvZHgiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLlvZPmma7pgJrlh73mlbDmsYLjgIIiLCJhbmFseXNpcyI6ImR5L2R4PShkeS9kdCkvKGR4L2R0KeOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5Y+C5pWw5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ZyA6KGl5a6M5pW05Y6f6aKY44CR5b2T5YmN6aKY5bmy57y65bCR5YW35L2T54K544CB5Y+C5pWw5YC85oiW5a6M5pW06KGo6L6+5byP77yb5YWI5oyJ5LiL6Z2i5rWB56iL5YGa77yM6KGl6b2Q5Y6f6aKY5ZCO5YaN5Luj5YWl5pyA5ZCO5LiA5q2l44CCXG7jgJDogIPngrnjgJHlj4LmlbDmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlvZPmma7pgJrlh73mlbDmsYLjgIJcbumYsumUme+8mmR5L2R4PShkeS9kdCkvKGR4L2R0KeOAgiJ9LHsiaWQiOiJNLTAwNC0wNiIsInRpdGxlIjoiTS0wMDQtMDYg5Y+C5pWw5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlj4LmlbDmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Ing9bG7iiJooMSt0wrIpLHk9YXJjdGFudO+8jOaxgmR5L2R4Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5pyq5YyW566AeOOAgiIsImFuYWx5c2lzIjoibG7iiJpBPTEvMmxuQeOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5Y+C5pWw5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Y+C5pWw5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIHg9bG7iiJooMSt0wrIpPTEvMiBsbigxK3TCsinjgIJcbjIuIGR4L2R0PXQvKDErdMKyKeOAglxuMy4geT1hcmN0YW5077yM5omA5LulIGR5L2R0PTEvKDErdMKyKeOAglxuNC4gZHkvZHg9KGR5L2R0KS8oZHgvZHQpPVsxLygxK3TCsildL1t0LygxK3TCsildPTEvdOOAglxu44CQ5q2j56Gu562U5qGI44CRZHkvZHg9MS9044CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muacquWMlueugHjjgIJcbumYsumUme+8mmxu4oiaQT0xLzJsbkHjgIIifSx7ImlkIjoiTS0wMDQtMDciLCJ0aXRsZSI6Ik0tMDA0LTA3IOWPguaVsOWIh+e6vyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5Y+C5pWw5YiH57q/Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLlj4LmlbDmlrnnqIvlt7Lnn6V45YC85rGC5YiH57q/5pa556iLIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5rKh5YWI6KejdOOAgiIsImFuYWx5c2lzIjoi5YWIeCh0KT3nu5nlrprlgLzmsYJ044CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLlj4LmlbDliIfnur8iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDpnIDooaXlrozmlbTljp/popjjgJHlvZPliY3popjlubLnvLrlsJHlhbfkvZPngrnjgIHlj4LmlbDlgLzmiJblrozmlbTooajovr7lvI/vvJvlhYjmjInkuIvpnaLmtYHnqIvlgZrvvIzooaXpvZDljp/popjlkI7lho3ku6PlhaXmnIDlkI7kuIDmraXjgIJcbuOAkOiAg+eCueOAkeWPguaVsOWIh+e6v1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnoa7lrprliIfngrnvvJvpopjnm67or7TigJzov4fmn5DngrnigJ3ml7bvvIzov5nkuKrngrnkuI3kuIDlrprmmK/liIfngrnjgIJcbjIuIOeUqOWvvOaVsOaxguWIh+e6v+aWnOeOhyBrPWYnKHgwKeOAglxuMy4g5YiH57q/5pa556iL5YaZIHkteTA9ayh4LXgwKeOAglxuNC4g5rOV57q/5pac546H5pivIC0xL2vvvJvoi6Ugaz0wIOaIluS4jeWtmOWcqO+8jOimgeWNleeLrOiuqOiuuuawtOW5sy/nq5bnm7Tmg4XlhrXjgIJcbjUuIOS4pOabsue6v+ebuOWIh+imgeWQjOaXtua7oei2s+WHveaVsOWAvOebuOetieWSjOWvvOaVsOWAvOebuOetieOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muayoeWFiOino3TjgIJcbumYsumUme+8muWFiHgodCk957uZ5a6a5YC85rGCdOOAgiJ9LHsiaWQiOiJNLTAwNC0wOCIsInRpdGxlIjoiTS0wMDQtMDgg6L+H5a6a54K55YiH57q/Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLov4flrprngrnliIfnur8iLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuabsue6v+i/h+afkOeCueeahOWIh+e6v+aWueeoiyIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuaKiui/h+eCueW9k+WIh+eCueOAgiIsImFuYWx5c2lzIjoi5Y+m6K6+5YiH54K544CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLov4flrprngrnliIfnur8iXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDpnIDooaXlrozmlbTljp/popjjgJHlvZPliY3popjlubLnvLrlsJHlhbfkvZPngrnjgIHlj4LmlbDlgLzmiJblrozmlbTooajovr7lvI/vvJvlhYjmjInkuIvpnaLmtYHnqIvlgZrvvIzooaXpvZDljp/popjlkI7lho3ku6PlhaXmnIDlkI7kuIDmraXjgIJcbuOAkOiAg+eCueOAkei/h+WumueCueWIh+e6v1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnoa7lrprliIfngrnvvJvpopjnm67or7TigJzov4fmn5DngrnigJ3ml7bvvIzov5nkuKrngrnkuI3kuIDlrprmmK/liIfngrnjgIJcbjIuIOeUqOWvvOaVsOaxguWIh+e6v+aWnOeOhyBrPWYnKHgwKeOAglxuMy4g5YiH57q/5pa556iL5YaZIHkteTA9ayh4LXgwKeOAglxuNC4g5rOV57q/5pac546H5pivIC0xL2vvvJvoi6Ugaz0wIOaIluS4jeWtmOWcqO+8jOimgeWNleeLrOiuqOiuuuawtOW5sy/nq5bnm7Tmg4XlhrXjgIJcbjUuIOS4pOabsue6v+ebuOWIh+imgeWQjOaXtua7oei2s+WHveaVsOWAvOebuOetieWSjOWvvOaVsOWAvOebuOetieOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muaKiui/h+eCueW9k+WIh+eCueOAglxu6Ziy6ZSZ77ya5Y+m6K6+5YiH54K544CCIn0seyJpZCI6Ik0tMDA0LTA5IiwidGl0bGUiOiJNLTAwNC0wOSDnm7jliIciLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuebuOWIhyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5Lik5puy57q/55u45YiH5rGC5Y+C5pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi6K+v55So5rOV57q/5oiW5ryP5pac546H44CCIiwiYW5hbHlzaXMiOiLlhbHngrkr5YWx5pac546H44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLnm7jliIciXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHnm7jliIdcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI56Gu5a6a5YiH54K577yb6aKY55uu6K+04oCc6L+H5p+Q54K54oCd5pe277yM6L+Z5Liq54K55LiN5LiA5a6a5piv5YiH54K544CCXG4yLiDnlKjlr7zmlbDmsYLliIfnur/mlpznjocgaz1mJyh4MCnjgIJcbjMuIOWIh+e6v+aWueeoi+WGmSB5LXkwPWsoeC14MCnjgIJcbjQuIOazlee6v+aWnOeOh+aYryAtMS9r77yb6IulIGs9MCDmiJbkuI3lrZjlnKjvvIzopoHljZXni6zorqjorrrmsLTlubMv56uW55u05oOF5Ya144CCXG41LiDkuKTmm7Lnur/nm7jliIfopoHlkIzml7bmu6HotrPlh73mlbDlgLznm7jnrYnlkozlr7zmlbDlgLznm7jnrYnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJror6/nlKjms5Xnur/miJbmvI/mlpznjofjgIJcbumYsumUme+8muWFseeCuSvlhbHmlpznjofjgIIifSx7ImlkIjoiTS0wMDQtMTAiLCJ0aXRsZSI6Ik0tMDA0LTEwIOWvueaVsOaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5a+55pWw5rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PSh4LygxK3gpKV5455qE5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoidV525Z6L5rKh5Y+WbG7jgIIiLCJhbmFseXNpcyI6ImxueT14bG5beC8oMSt4KV3jgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWvueaVsOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWvueaVsOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mnVeduWei+ayoeWPlmxu44CCXG7pmLLplJnvvJpsbnk9eGxuW3gvKDEreCld44CCIn0seyJpZCI6Ik0tMDA0LTExIiwidGl0bGUiOiJNLTAwNC0xMSDlr7nmlbDmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWvueaVsOaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT3iiJpbKDN4LTIpLygoNS0yeCkoeC0xKSld5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi56Gs5rGC5a+85re35Lmx44CCIiwiYW5hbHlzaXMiOiLlj5ZsbuaLhuWIhuOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5a+55pWw5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5a+55pWw5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya56Gs5rGC5a+85re35Lmx44CCXG7pmLLplJnvvJrlj5ZsbuaLhuWIhuOAgiJ9LHsiaWQiOiJNLTAwNC0xMiIsInRpdGxlIjoiTS0wMDQtMTIg5a+55pWw5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlr7nmlbDmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9wrPiiJpbeCh4wrIrMSkvKGVeeCh4wrIrNSkpXeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6ImxuKGVeeCk9eOS4jeeGn+OAgiIsImFuYWx5c2lzIjoi5Y+WbG7mi4bkuZjpmaTmoLnjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWvueaVsOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWvueaVsOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mmxuKGVeeCk9eOS4jeeGn+OAglxu6Ziy6ZSZ77ya5Y+WbG7mi4bkuZjpmaTmoLnjgIIifSx7ImlkIjoiTS0wMDQtMTMiLCJ0aXRsZSI6Ik0tMDA0LTEzIOmrmOmYtuWvvOaVsCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi6auY6Zi25a+85pWwIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLorr55PWxuKHgtMSnvvIzmsYJ5XihuKSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuS4jeWGmeWJjeWHoOmYtuaJvuinhOW+i+OAgiIsImFuYWx5c2lzIjoi55yL56ym5Y+36Zi25LmY5bmC5qyh44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLpq5jpmLblr7zmlbAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHpq5jpmLblr7zmlbBcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrkuI3lhpnliY3lh6DpmLbmib7op4TlvovjgIJcbumYsumUme+8mueci+espuWPt+mYtuS5mOW5guasoeOAgiJ9LHsiaWQiOiJNLTAwNC0xNCIsInRpdGxlIjoiTS0wMDQtMTQg5LqM6Zi25a+85pWwIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLkuozpmLblr7zmlbAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9Y29zwrJ4wrdsbnjnmoTkuozpmLblr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLkuZjnp6/pk77lvI/mvI/pobnjgIIiLCJhbmFseXNpcyI6IuWFiOaxguS4gOmYtuWGjemAkOmhueaxguS6jOmYtuOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5LqM6Zi25a+85pWwIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5LqM6Zi25a+85pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LmY56ev6ZO+5byP5ryP6aG544CCXG7pmLLplJnvvJrlhYjmsYLkuIDpmLblho3pgJDpobnmsYLkuozpmLbjgIIifSx7ImlkIjoiTS0wMDQtMTUiLCJ0aXRsZSI6Ik0tMDA0LTE1IOeJueauiuaegemZkCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi54m55q6K5p6B6ZmQIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJsaW0oeOKGkjApW2VeKHjCsiktMS14wrJdL1t4wrNzaW54XSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iua3t+a3hmVedS0xLXXjgIIiLCJhbmFseXNpcyI6ImVedS0xLXV+dcKyLzLjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIueJueauiuaegemZkCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeeJueauiuetieS7t+aXoOept+Wwj1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDku6QgdT14wrLvvIzliJkgZV4oeMKyKS0xLXjCsj1lXnUtMS1144CCXG4yLiB14oaSMCDml7bvvIxlXnUtMS11IH4gdcKyLzLjgIJcbjMuIOaJgOS7peWIhuWtkCB+ICh4wrIpwrIvMj144oG0LzLjgIJcbjQuIOWIhuavjSB4wrNzaW54IH4geMKzwrd4PXjigbTjgIJcbjUuIOaegemZkOS4uiAoeOKBtC8yKS944oG0PTEvMuOAglxu44CQ5q2j56Gu562U5qGI44CRMS8y44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mua3t+a3hmVedS0xLXXjgIJcbumYsumUme+8mmVedS0xLXV+dcKyLzLjgIIifSx7ImlkIjoiTS0wMDQtMTYiLCJ0aXRsZSI6Ik0tMDA0LTE2IOW5guaMh+aegemZkCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5bmC5oyH5p6B6ZmQIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJsaW0oeOKGkjArKXheKHRhbngpIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoiMF4w5LiN5Lya6L2s5YyW44CCIiwiYW5hbHlzaXMiOiLlhpnmiJBlXnt0YW54wrdsbnh944CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLluYLmjIfmnoHpmZAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHluYLmjIfmnoHpmZBcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5Yik5pat5p6B6ZmQ57G75Z6L77ya55u05o6l5Luj5YWl44CBMC8w44CB4oieL+KInuOAgeaXoOept+Wkp+mHj+OAgeW5guaMh+Wei+aIluaVsOWIl+Wei+OAglxuMi4gMC8wIOWei+S8mOWFiOiAg+iZkeetieS7t+aXoOept+Wwj+OAgeWboOW8j+WIhuino+OAgemAmuWIhuOAgeacieeQhuWMluaIlua0m+W/hei+vuOAglxuMy4g5LiJ6KeS5p6B6ZmQ6K6w5L2PIHNpbmF4fmF444CBdGFuYXh+YXjjgIExLWNvc3h+eMKyLzLjgIJcbjQuIOW5guaMh+Wei+e7n+S4gOWGmeaIkCBlXnvmjIfmlbDCt2xu5bqV5pWwfe+8jOWFiOaxguaMh+aVsOS4iueahOaegemZkOOAglxuNS4g5pWw5YiX5YiG5byP55yL5pyA6auY5qyh77yb5oyH5pWw5Z6L5YWI5q+U6L6D5pyA5aSn5bqV5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77yaMF4w5LiN5Lya6L2s5YyW44CCXG7pmLLplJnvvJrlhpnmiJBlXnt0YW54wrdsbnh944CCIn0seyJpZCI6Ik0tMDA0LTE3IiwidGl0bGUiOiJNLTAwNC0xNyDnq5bnm7TliIfnur8iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuerluebtOWIh+e6vyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoieT3iiJt45ZyoKDAsMCnlpITnmoTliIfnur/mlrnnqIsiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLlr7zmlbDml6Dnqbfmg4XlvaLkuI3nhp/jgIIiLCJhbmFseXNpcyI6IuWIh+e6v3g9MOOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi56uW55u05YiH57q/Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR56uW55u05YiH57q/XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOehruWumuWIh+eCue+8m+mimOebruivtOKAnOi/h+afkOeCueKAneaXtu+8jOi/meS4queCueS4jeS4gOWumuaYr+WIh+eCueOAglxuMi4g55So5a+85pWw5rGC5YiH57q/5pac546HIGs9ZicoeDAp44CCXG4zLiDliIfnur/mlrnnqIvlhpkgeS15MD1rKHgteDAp44CCXG40LiDms5Xnur/mlpznjofmmK8gLTEva++8m+iLpSBrPTAg5oiW5LiN5a2Y5Zyo77yM6KaB5Y2V54us6K6o6K665rC05bmzL+erluebtOaDheWGteOAglxuNS4g5Lik5puy57q/55u45YiH6KaB5ZCM5pe25ruh6Laz5Ye95pWw5YC855u4562J5ZKM5a+85pWw5YC855u4562J44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5a+85pWw5peg56m35oOF5b2i5LiN54af44CCXG7pmLLplJnvvJrliIfnur94PTDjgIIifSx7ImlkIjoiTS0wMDQtMTgiLCJ0aXRsZSI6Ik0tMDA0LTE4IOWIh+e6v+W5s+ihjCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5YiH57q/5bmz6KGMIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJ5PXjCsy145ZyoTeeCueWIh+e6v+W5s+ihjOS6jngreT0x77yM5rGCTSIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuacquaxguebtOe6v+aWnOeOh+OAgiIsImFuYWx5c2lzIjoi5a+85pWw562J5LqOLTHjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWIh+e6v+W5s+ihjCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWIh+e6v+W5s+ihjFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnoa7lrprliIfngrnvvJvpopjnm67or7TigJzov4fmn5DngrnigJ3ml7bvvIzov5nkuKrngrnkuI3kuIDlrprmmK/liIfngrnjgIJcbjIuIOeUqOWvvOaVsOaxguWIh+e6v+aWnOeOhyBrPWYnKHgwKeOAglxuMy4g5YiH57q/5pa556iL5YaZIHkteTA9ayh4LXgwKeOAglxuNC4g5rOV57q/5pac546H5pivIC0xL2vvvJvoi6Ugaz0wIOaIluS4jeWtmOWcqO+8jOimgeWNleeLrOiuqOiuuuawtOW5sy/nq5bnm7Tmg4XlhrXjgIJcbjUuIOS4pOabsue6v+ebuOWIh+imgeWQjOaXtua7oei2s+WHveaVsOWAvOebuOetieWSjOWvvOaVsOWAvOebuOetieOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muacquaxguebtOe6v+aWnOeOh+OAglxu6Ziy6ZSZ77ya5a+85pWw562J5LqOLTHjgIIifSx7ImlkIjoiTS0wMDQtMTkiLCJ0aXRsZSI6Ik0tMDA0LTE5IOebuOWIh+axguWPgiIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi55u45YiH5rGC5Y+CIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJ5PWHiiJp45LiOeT1sbnjnm7jliIfvvIzmsYJhIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5ryP5YWx5pac546H44CCIiwiYW5hbHlzaXMiOiLlhbHngrnlhbHmlpznjofjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuebuOWIh+axguWPgiJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS4pOabsue6v+ebuOWIh+axguWPguaVsFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDorr7liIfngrnmqKrlnZDmoIfkuLogeOKCgD4w44CCXG4yLiDlh73mlbDlgLznm7jnrYnvvJph4oiaeOKCgD1sbnjigoDjgIJcbjMuIOWvvOaVsOebuOetie+8mmEvKDLiiJp44oKAKT0xL3jigoDjgIJcbjQuIOeUseWvvOaVsOebuOetieW+lyBhPTIv4oiaeOKCgOOAglxuNS4g5Luj5YWl5Ye95pWw5YC855u4562J77yaMj1sbnjigoDvvIzmiYDku6UgeOKCgD1lwrLjgIJcbjYuIGE9Mi9l44CCXG7jgJDmraPnoa7nrZTmoYjjgJFhPTIvZeOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmvI/lhbHmlpznjofjgIJcbumYsumUme+8muWFseeCueWFseaWnOeOh+OAgiJ9LHsiaWQiOiJNLTAwNC0yMCIsInRpdGxlIjoiTS0wMDQtMjAg5ZWG5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLllYbmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuaxgmYodCk9KDEt4oiadCkvKDEr4oiadCnnmoTlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLiiJp056ym5Y+35piT6ZSZ44CCIiwiYW5hbHlzaXMiOiLorr51L3bjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWVhuaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWVhuaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muKImnTnrKblj7fmmJPplJnjgIJcbumYsumUme+8muiuvnUvduOAgiJ9LHsiaWQiOiJNLTAwNC0yMSIsInRpdGxlIjoiTS0wMDQtMjEg6ZO+5byP5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLpk77lvI/msYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuaxgmYoeCk9My8oNS14KSt4wrIvNeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iua8j+WGheWxgi0x44CCIiwiYW5hbHlzaXMiOiJbMS91XeKAmT0tdeKAmS91wrLjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIumTvuW8j+axguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkemTvuW8j+axguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mua8j+WGheWxgi0x44CCXG7pmLLplJnvvJpbMS91XeKAmT0tdeKAmS91wrLjgIIifSx7ImlkIjoiTS0wMDQtMjIiLCJ0aXRsZSI6Ik0tMDA0LTIyIOW5guWHveaVsCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5bmC5Ye95pWwIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTEveC0y4oiaeCt4XigzLzIp5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5YiG5pWw5bmC5LiN54af44CCIiwiYW5hbHlzaXMiOiLiiJp4PXheMS8y44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLluYLlh73mlbAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHluYLlh73mlbBcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5qCH5Ye66aKY55uu6ICD54K55ZKM5bey55+l5p2h5Lu244CCXG4yLiDlhpnlh7rmnKzpopjopoHnlKjnmoTlhazlvI/miJblrprnkIbjgIJcbjMuIOaMieWFrOW8j+S7o+WFpeW5tuaVtOeQhu+8jOazqOaEj+WumuS5ieWfn+OAgeerr+eCueOAgeW3puWPs+aegemZkOaIluWPguaVsOiMg+WbtOOAglxuNC4g5pyA5ZCO5Zue5Yiw6aKY55uu6Zeu6aKY77yM5YaZ5riF5qWa562U5qGI5oiW6K+B5piO57uT6K6644CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5YiG5pWw5bmC5LiN54af44CCXG7pmLLplJnvvJriiJp4PXheMS8y44CCIn0seyJpZCI6Ik0tMDA0LTIzIiwidGl0bGUiOiJNLTAwNC0yMyDkuZjnp68r5oyH5pWwIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLkuZjnp68r5oyH5pWwIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTJeeMK3eMKy5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5ryPbG4y5oiW5ryP5LiA6aG544CCIiwiYW5hbHlzaXMiOiIoYV54KeKAmT1hXnhsbmHjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuS5mOenryvmjIfmlbAiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHkuZjnp68gKyDmjIfmlbDmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5oqKIHk9Ml54wrd4wrIg55yL5oiQ5Lik5Liq5Ye95pWw55u45LmY44CCXG4yLiAoMl54KSc9Ml54IGxuMu+8jCh4wrIpJz0yeOOAglxuMy4g55So5LmY56ev5rGC5a+877yaeSc9KDJeeCkneMKyKzJeeCh4wrIpJ+OAglxuNC4g5pW055CG5b6XIHknPTJeeCh4wrJsbjIrMngp44CCXG7jgJDmraPnoa7nrZTmoYjjgJF5Jz0yXngoeMKybG4yKzJ4KeOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmvI9sbjLmiJbmvI/kuIDpobnjgIJcbumYsumUme+8mihhXngp4oCZPWFeeGxuYeOAgiJ9LHsiaWQiOiJNLTAwNC0yNCIsInRpdGxlIjoiTS0wMDQtMjQg5ZWG5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLllYbmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9KHgrMSkvKHgtMinlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLliIbmr43lubPmlrnmvI/jgIIiLCJhbmFseXNpcyI6IuWVhuWFrOW8j+OAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5ZWG5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5ZWG5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5YiG5q+N5bmz5pa55ryP44CCXG7pmLLplJnvvJrllYblhazlvI/jgIIifSx7ImlkIjoiTS0wMDQtMjUiLCJ0aXRsZSI6Ik0tMDA0LTI1IOWkjeWQiOaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5aSN5ZCI5rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTEvKDEr4oiaeCkrMS8oMS3iiJp4KeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iua8j+KImnjlr7zmlbDjgIIiLCJhbmFseXNpcyI6IjHCseKImnjnnIvmlbTkvZPjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWkjeWQiOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWkjeWQiOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnnIvmnIDph4zpnaLnmoTmi6zlj7fvvIzmiorlhoXlsYLnu5PmnpzlvZPmiJDmlbTkvZPjgIJcbjIuIOiLpemimOebrue7mSBmKOafkOihqOi+vuW8jynvvIzlhYjku6TmlrDlj5jph48gdD3mn5Dooajovr7lvI/vvIzlj43op6Pljp/lj5jph4/jgIJcbjMuIOWIhuauteWHveaVsOimgeWFiOWIpOaWreWGheWxguWHveaVsOWAvOiQveWcqOWTquS4gOaute+8jOWGjeS7o+WFpeWkluWxguOAglxuNC4g5aSa6YeN5aSN5ZCI5b+F6aG75LuO5YaF5ZCR5aSW5LiA5bGC5LiA5bGC566X77yM5LiN6IO96Lez5q2l44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5ryP4oiaeOWvvOaVsOOAglxu6Ziy6ZSZ77yaMcKx4oiaeOeci+aVtOS9k+OAgiJ9LHsiaWQiOiJNLTAwNC0yNiIsInRpdGxlIjoiTS0wMDQtMjYg5LiJ6KeS5ZWG5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLkuInop5LllYbmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9KDErY29zeCkvKDEtY29zeCnlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLnrKblj7fplJnjgIIiLCJhbmFseXNpcyI6IigxLWNvc3gp4oCZPXNpbnjjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuS4ieinkuWVhuaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS4ieinkuWVhuaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muespuWPt+mUmeOAglxu6Ziy6ZSZ77yaKDEtY29zeCnigJk9c2lueOOAgiJ9LHsiaWQiOiJNLTAwNC0yNyIsInRpdGxlIjoiTS0wMDQtMjcg5LiJ6KeS5ZWG5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLkuInop5LllYbmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9c2lueC8oMStjb3N4KeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuS4ieinkuWvvOaVsOa3t+OAgiIsImFuYWx5c2lzIjoic2lu4oCZPWNvcywgY29z4oCZPS1zaW7jgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuS4ieinkuWVhuaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS4ieinkuWVhuaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muS4ieinkuWvvOaVsOa3t+OAglxu6Ziy6ZSZ77yac2lu4oCZPWNvcywgY29z4oCZPS1zaW7jgIIifSx7ImlkIjoiTS0wMDQtMjgiLCJ0aXRsZSI6Ik0tMDA0LTI4IOS5mOenryvkuInop5IiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS5mOenryvkuInop5IiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9eHRhbngrc2VjeC0x5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoic2Vj5a+85pWw5LiN54af44CCIiwiYW5hbHlzaXMiOiJzZWPigJk9c2VjIHRhbuOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5LmY56evK+S4ieinkiJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS5mOenryvkuInop5JcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJpzZWPlr7zmlbDkuI3nhp/jgIJcbumYsumUme+8mnNlY+KAmT1zZWMgdGFu44CCIn0seyJpZCI6Ik0tMDA0LTI5IiwidGl0bGUiOiJNLTAwNC0yOSDlj43kuInop5IiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWPjeS4ieinkiIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT1hcmNjb3MoMS94KeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWFrOW8j+S4jeeGn+OAgiIsImFuYWx5c2lzIjoiYXJjY29zdeWvvOaVsOOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5Y+N5LiJ6KeSIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Y+N5LiJ6KeSXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5YWs5byP5LiN54af44CCXG7pmLLplJnvvJphcmNjb3N15a+85pWw44CCIn0seyJpZCI6Ik0tMDA0LTMwIiwidGl0bGUiOiJNLTAwNC0zMCDlj43kuInop5Ir5ZWGIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlj43kuInop5Ir5ZWGIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PWFyY3RhbigoeCsxKS8oeC0xKSnlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLkuI3orr5144CCIiwiYW5hbHlzaXMiOiJ14oCZLygxK3XCsinjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWPjeS4ieinkivllYYiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlj43kuInop5Ir5ZWGXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LiN6K6+deOAglxu6Ziy6ZSZ77yadeKAmS8oMSt1wrIp44CCIn0seyJpZCI6Ik0tMDA0LTMxIiwidGl0bGUiOiJNLTAwNC0zMSDlpJrph43lpI3lkIgiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWkmumHjeWkjeWQiCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT1jb3NbZigxL3gpXeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iua8j+WxguOAgiIsImFuYWx5c2lzIjoi6YCQ5bGC6ZO+5byP44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLlpJrph43lpI3lkIgiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlpJrph43lpI3lkIhcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI55yL5pyA6YeM6Z2i55qE5ous5Y+377yM5oqK5YaF5bGC57uT5p6c5b2T5oiQ5pW05L2T44CCXG4yLiDoi6Xpopjnm67nu5kgZijmn5Dooajovr7lvI8p77yM5YWI5Luk5paw5Y+Y6YePIHQ95p+Q6KGo6L6+5byP77yM5Y+N6Kej5Y6f5Y+Y6YeP44CCXG4zLiDliIbmrrXlh73mlbDopoHlhYjliKTmlq3lhoXlsYLlh73mlbDlgLzokL3lnKjlk6rkuIDmrrXvvIzlho3ku6PlhaXlpJblsYLjgIJcbjQuIOWkmumHjeWkjeWQiOW/hemhu+S7juWGheWQkeWkluS4gOWxguS4gOWxgueul++8jOS4jeiDvei3s+atpeOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mua8j+WxguOAglxu6Ziy6ZSZ77ya6YCQ5bGC6ZO+5byP44CCIn0seyJpZCI6Ik0tMDA0LTMyIiwidGl0bGUiOiJNLTAwNC0zMiDnu7zlkIjmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6Iue7vOWQiOaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT3iiJooNC14wrIpK3jCt2FyY3Npbih4LzIp5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5q2l6aqk5Lmx44CCIiwiYW5hbHlzaXMiOiLliIbpobnlpITnkIbjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIue7vOWQiOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkee7vOWQiOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muatpemqpOS5seOAglxu6Ziy6ZSZ77ya5YiG6aG55aSE55CG44CCIn0seyJpZCI6Ik0tMDA0LTMzIiwidGl0bGUiOiJNLTAwNC0zMyDlpI3lkIjmjIflrprngrkiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWkjeWQiOaMh+WumueCuSIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT1lXnggYXJjdGFuKGVeeCktbG7iiJooMStlXigyeCkp5ZyoMOWkhOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuW/mOS7ozDjgIIiLCJhbmFseXNpcyI6IuWFiOaxguWvvOWGjeS7o+WAvOOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5aSN5ZCI5oyH5a6a54K5Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5oyH5a6a54K55a+85pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWvuSBlXnggYXJjdGFuKGVeeCkg55So5LmY56ev5ZKM6ZO+5byP5rGC5a+844CCXG4yLiDlr7zmlbDkuLogZV54IGFyY3RhbihlXngpK2VeeMK3ZV54LygxK2VeKDJ4KSnjgIJcbjMuIOWvuSBsbuKImigxK2VeKDJ4KSkg5YaZ5oiQIDEvMiBsbigxK2VeKDJ4KSnvvIzlr7zmlbDkuLogZV4oMngpLygxK2VeKDJ4KSnjgIJcbjQuIOS7oyB4PTDvvJrnrKzkuIDpg6jliIbkuLogz4AvNCsxLzLvvIznrKzkuozpg6jliIbkuLogMS8y44CCXG41LiDnm7jlh4/lvpcgz4AvNOOAglxu44CQ5q2j56Gu562U5qGI44CR5ZyoIDAg5aSE5a+85pWw5Li6IM+ALzTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5b+Y5LujMOOAglxu6Ziy6ZSZ77ya5YWI5rGC5a+85YaN5Luj5YC844CCIn0seyJpZCI6Ik0tMDA0LTM0IiwidGl0bGUiOiJNLTAwNC0zNCDlr7nmlbAr5Y+N5LiJ6KeSIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlr7nmlbAr5Y+N5LiJ6KeSIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTEvNGxuKCgxK3gpLygxLXgpKS0xLzJhcmN0YW545a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5LiN5Lya5ouGbG7llYbjgIIiLCJhbmFseXNpcyI6ImxuQS1sbkLjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWvueaVsCvlj43kuInop5IiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlr7nmlbAr5Y+N5LiJ6KeSXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LiN5Lya5ouGbG7llYbjgIJcbumYsumUme+8mmxuQS1sbkLjgIIifSx7ImlkIjoiTS0wMDQtMzUiLCJ0aXRsZSI6Ik0tMDA0LTM1IOS5mOenryvllYYiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS5mOenryvllYYiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9eMKyc2luKDEveCkrMngvKDEteMKyKeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWGheWxgua8j+S5mOOAgiIsImFuYWx5c2lzIjoi6ZO+5byP44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLkuZjnp68r5ZWGIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5LmY56evK+WVhlxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muWGheWxgua8j+S5mOOAglxu6Ziy6ZSZ77ya6ZO+5byP44CCIn0seyJpZCI6Ik0tMDA0LTM2IiwidGl0bGUiOiJNLTAwNC0zNiDliIbmrrXmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWIhuauteaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5YiG5q61Zj17eMKyc2luKDEveCkseOKJoDA7MCx4PTB95rGC5a+8Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoiMOeCueayoeWNleeLrOeul+OAgiIsImFuYWx5c2lzIjoi55So5a6a5LmJ44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLliIbmrrXmsYLlr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHliIbmrrXmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5aaC5p6c6ICD5a+85pWw5a6a5LmJ77yM5YaZ5Ye6IGxpbSho4oaSMClbZih4MCtoKS1mKHgwKV0vaOOAglxuMi4g5ZCr5qC55byP5YWI5pyJ55CG5YyW77yM5ZCr57ud5a+55YC85oiW5YiG5q616KaB5YiG5bem5Y+z5p6B6ZmQ44CCXG4zLiDliIbmrrXngrnlj6/lr7zlv4XpobvlhYjov57nu63vvIzlho3mr5TovoPlt6blr7zmlbDlkozlj7Plr7zmlbDjgIJcbjQuIOaxguWPguaVsOmimOmAmuW4uOWFiOeUsei/nue7reaAp+axguS4gOS4quWPguaVsO+8jOWGjeeUseW3puWPs+WvvOaVsOebuOetieaxguWPpuS4gOS4quWPguaVsOOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mjDngrnmsqHljZXni6znrpfjgIJcbumYsumUme+8mueUqOWumuS5ieOAgiJ9LHsiaWQiOiJNLTAwNC0zNyIsInRpdGxlIjoiTS0wMDQtMzcg5YiG5q615rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLliIbmrrXmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuWIhuautWY9e3NpbngseDwwO2xuKDEreCkseOKJpTB95rGC5a+8Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5bem5Y+z5a+85pWw5rKh5q+U44CCIiwiYW5hbHlzaXMiOiLliIbnlYzngrnljZXni6zjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWIhuauteaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWIhuauteaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlpoLmnpzogIPlr7zmlbDlrprkuYnvvIzlhpnlh7ogbGltKGjihpIwKVtmKHgwK2gpLWYoeDApXS9o44CCXG4yLiDlkKvmoLnlvI/lhYjmnInnkIbljJbvvIzlkKvnu53lr7nlgLzmiJbliIbmrrXopoHliIblt6blj7PmnoHpmZDjgIJcbjMuIOWIhuauteeCueWPr+WvvOW/hemhu+WFiOi/nue7re+8jOWGjeavlOi+g+W3puWvvOaVsOWSjOWPs+WvvOaVsOOAglxuNC4g5rGC5Y+C5pWw6aKY6YCa5bi45YWI55Sx6L+e57ut5oCn5rGC5LiA5Liq5Y+C5pWw77yM5YaN55Sx5bem5Y+z5a+85pWw55u4562J5rGC5Y+m5LiA5Liq5Y+C5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5bem5Y+z5a+85pWw5rKh5q+U44CCXG7pmLLplJnvvJrliIbnlYzngrnljZXni6zjgIIifSx7ImlkIjoiTS0wMDQtMzgiLCJ0aXRsZSI6Ik0tMDA0LTM4IOWvueaVsOaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5a+55pWw5rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLph43lpI3vvJp5PcKz4oiaW3goeMKyKzEpLyhlXngoeMKyKzUpKV3msYLlr7wiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLph43lpI3popjkvYbkv53nlZnntKLlvJXjgIIiLCJhbmFseXNpcyI6IuWPlmxu44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLlr7nmlbDmsYLlr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlr7nmlbDmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrph43lpI3popjkvYbkv53nlZnntKLlvJXjgIJcbumYsumUme+8muWPlmxu44CCIn0seyJpZCI6Ik0tMDA0LTM5IiwidGl0bGUiOiJNLTAwNC0zOSDkuZjnp6/lpI3lkIgiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS5mOenr+WkjeWQiCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT1bKDEteCkvKDEreCldZV7iiJp45a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoiZV7iiJp45ryP6ZO+5byP44CCIiwiYW5hbHlzaXMiOiJ1PeKImnjjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuS5mOenr+WkjeWQiCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS5mOenr+WkjeWQiFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnnIvmnIDph4zpnaLnmoTmi6zlj7fvvIzmiorlhoXlsYLnu5PmnpzlvZPmiJDmlbTkvZPjgIJcbjIuIOiLpemimOebrue7mSBmKOafkOihqOi+vuW8jynvvIzlhYjku6TmlrDlj5jph48gdD3mn5Dooajovr7lvI/vvIzlj43op6Pljp/lj5jph4/jgIJcbjMuIOWIhuauteWHveaVsOimgeWFiOWIpOaWreWGheWxguWHveaVsOWAvOiQveWcqOWTquS4gOaute+8jOWGjeS7o+WFpeWkluWxguOAglxuNC4g5aSa6YeN5aSN5ZCI5b+F6aG75LuO5YaF5ZCR5aSW5LiA5bGC5LiA5bGC566X77yM5LiN6IO96Lez5q2l44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77yaZV7iiJp45ryP6ZO+5byP44CCXG7pmLLplJnvvJp1PeKImnjjgIIifSx7ImlkIjoiTS0wMDQtNDAiLCJ0aXRsZSI6Ik0tMDA0LTQwIOWVhuaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5ZWG5rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PXgvKDEr4oiaeCnlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLlhazlvI/kuI3nqLPjgIIiLCJhbmFseXNpcyI6InUvduOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5ZWG5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5ZWG5rGC5a+8ICsg5qC55byPXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOiuviB1PXjvvIx2PTEr4oiaeOOAglxuMi4gdSc9Me+8jHYnPTEvKDLiiJp4KeOAglxuMy4geSc9KHUndi11dicpL3bCsuOAglxuNC4g5Luj5YWl5b6XIHknPVsxK+KImngteC8oMuKImngpXS8oMSviiJp4KcKy44CCXG41LiDlm6DkuLogeC8oMuKImngpPeKImngvMu+8jOaVtOeQhuW+lyB5Jz0oMSviiJp4LzIpLygxK+KImngpwrLjgIJcbuOAkOato+ehruetlOahiOOAkXknPSgxK+KImngvMikvKDEr4oiaeCnCsuOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlhazlvI/kuI3nqLPjgIJcbumYsumUme+8mnUvduOAgiJ9LHsiaWQiOiJNLTAwNC00MSIsInRpdGxlIjoiTS0wMDQtNDEg5ZWG5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLllYbmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9KDEt4oiaeCkvKDEr4oiaeCnlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLnrKblj7fkuI3nqLPjgIIiLCJhbmFseXNpcyI6InUvduOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5ZWG5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5ZWG5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya56ym5Y+35LiN56iz44CCXG7pmLLplJnvvJp1L3bjgIIifSx7ImlkIjoiTS0wMDQtNDIiLCJ0aXRsZSI6Ik0tMDA0LTQyIOWkjeWQiOaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5aSN5ZCI5rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTMvKDUteCkreMKyLzXlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLlhoXlsYLmvI/jgIIiLCJhbmFseXNpcyI6IlsxL3Vd5YWs5byP44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLlpI3lkIjmsYLlr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlpI3lkIjmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI55yL5pyA6YeM6Z2i55qE5ous5Y+377yM5oqK5YaF5bGC57uT5p6c5b2T5oiQ5pW05L2T44CCXG4yLiDoi6Xpopjnm67nu5kgZijmn5Dooajovr7lvI8p77yM5YWI5Luk5paw5Y+Y6YePIHQ95p+Q6KGo6L6+5byP77yM5Y+N6Kej5Y6f5Y+Y6YeP44CCXG4zLiDliIbmrrXlh73mlbDopoHlhYjliKTmlq3lhoXlsYLlh73mlbDlgLzokL3lnKjlk6rkuIDmrrXvvIzlho3ku6PlhaXlpJblsYLjgIJcbjQuIOWkmumHjeWkjeWQiOW/hemhu+S7juWGheWQkeWkluS4gOWxguS4gOWxgueul++8jOS4jeiDvei3s+atpeOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muWGheWxgua8j+OAglxu6Ziy6ZSZ77yaWzEvdV3lhazlvI/jgIIifSx7ImlkIjoiTS0wMDQtNDMiLCJ0aXRsZSI6Ik0tMDA0LTQzIOW5guWHveaVsCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5bmC5Ye95pWwIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTEveC0y4oiaeCt4XigzLzIp5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5qC55Y+35YiG5pWw5bmC5LiN54af44CCIiwiYW5hbHlzaXMiOiLovazmjIfmlbDjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuW5guWHveaVsCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeW5guWHveaVsFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmoIflh7rpopjnm67ogIPngrnlkozlt7Lnn6XmnaHku7bjgIJcbjIuIOWGmeWHuuacrOmimOimgeeUqOeahOWFrOW8j+aIluWumueQhuOAglxuMy4g5oyJ5YWs5byP5Luj5YWl5bm25pW055CG77yM5rOo5oSP5a6a5LmJ5Z+f44CB56uv54K544CB5bem5Y+z5p6B6ZmQ5oiW5Y+C5pWw6IyD5Zu044CCXG40LiDmnIDlkI7lm57liLDpopjnm67pl67popjvvIzlhpnmuIXmpZrnrZTmoYjmiJbor4HmmI7nu5PorrrjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrmoLnlj7fliIbmlbDluYLkuI3nhp/jgIJcbumYsumUme+8mui9rOaMh+aVsOOAgiJ9LHsiaWQiOiJNLTAwNC00NCIsInRpdGxlIjoiTS0wMDQtNDQg5LmY56ev5oyH5pWwIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLkuZjnp6/mjIfmlbAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9Ml54wrd4wrLlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmvI9sbjLjgIIiLCJhbmFseXNpcyI6IuS5mOenryvmjIfmlbDjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuS5mOenr+aMh+aVsCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS5mOenryArIOaMh+aVsOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDmioogeT0yXnjCt3jCsiDnnIvmiJDkuKTkuKrlh73mlbDnm7jkuZjjgIJcbjIuICgyXngpJz0yXnggbG4y77yMKHjCsiknPTJ444CCXG4zLiDnlKjkuZjnp6/msYLlr7zvvJp5Jz0oMl54KSd4wrIrMl54KHjCsikn44CCXG40LiDmlbTnkIblvpcgeSc9Ml54KHjCsmxuMisyeCnjgIJcbuOAkOato+ehruetlOahiOOAkXknPTJeeCh4wrJsbjIrMngp44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mua8j2xuMuOAglxu6Ziy6ZSZ77ya5LmY56evK+aMh+aVsOOAgiJ9LHsiaWQiOiJNLTAwNC00NSIsInRpdGxlIjoiTS0wMDQtNDUg5ZWG5rGC5a+8Iiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLllYbmsYLlr7wiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9KHgrMSkvKHgtMinlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmvI/liIbmr43lubPmlrnjgIIiLCJhbmFseXNpcyI6IuWVhuWFrOW8j+OAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5ZWG5rGC5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5ZWG5rGC5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5ryP5YiG5q+N5bmz5pa544CCXG7pmLLplJnvvJrllYblhazlvI/jgIIifSx7ImlkIjoiTS0wMDQtNDYiLCJ0aXRsZSI6Ik0tMDA0LTQ2IOWkjeWQiOaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5aSN5ZCI5rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLmsYJ5PTEvKDEr4oiaeCkrMS8oMS3iiJp4KeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Iua8j+WGheWxguOAgiIsImFuYWx5c2lzIjoi6ZO+5byP44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLlpI3lkIjmsYLlr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlpI3lkIjmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI55yL5pyA6YeM6Z2i55qE5ous5Y+377yM5oqK5YaF5bGC57uT5p6c5b2T5oiQ5pW05L2T44CCXG4yLiDoi6Xpopjnm67nu5kgZijmn5Dooajovr7lvI8p77yM5YWI5Luk5paw5Y+Y6YePIHQ95p+Q6KGo6L6+5byP77yM5Y+N6Kej5Y6f5Y+Y6YeP44CCXG4zLiDliIbmrrXlh73mlbDopoHlhYjliKTmlq3lhoXlsYLlh73mlbDlgLzokL3lnKjlk6rkuIDmrrXvvIzlho3ku6PlhaXlpJblsYLjgIJcbjQuIOWkmumHjeWkjeWQiOW/hemhu+S7juWGheWQkeWkluS4gOWxguS4gOWxgueul++8jOS4jeiDvei3s+atpeOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8mua8j+WGheWxguOAglxu6Ziy6ZSZ77ya6ZO+5byP44CCIn0seyJpZCI6Ik0tMDA0LTQ3IiwidGl0bGUiOiJNLTAwNC00NyDkuInop5LllYYiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuS4ieinkuWVhiIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT0oMStjb3N4KS8oMS1jb3N4KeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuespuWPt+mUmeOAgiIsImFuYWx5c2lzIjoi5LiJ6KeS5a+85pWw44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLkuInop5LllYYiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHkuInop5LllYZcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrnrKblj7fplJnjgIJcbumYsumUme+8muS4ieinkuWvvOaVsOOAgiJ9LHsiaWQiOiJNLTAwNC00OCIsInRpdGxlIjoiTS0wMDQtNDgg5LiJ6KeS5ZWGIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLkuInop5LllYYiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9c2lueC8oMStjb3N4KeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuWFrOW8j+a3t+OAgiIsImFuYWx5c2lzIjoi5ZWG5YWs5byP44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLkuInop5LllYYiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHkuInop5LllYZcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlhazlvI/mt7fjgIJcbumYsumUme+8muWVhuWFrOW8j+OAgiJ9LHsiaWQiOiJNLTAwNC00OSIsInRpdGxlIjoiTS0wMDQtNDkg5LiJ6KeS5a+85pWwIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLkuInop5Llr7zmlbAiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9eHRhbngrc2VjeC0x5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoic2Vj5LiN54af44CCIiwiYW5hbHlzaXMiOiJzZWPigJk9c2VjIHRhbuOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5LiJ6KeS5a+85pWwIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5LiJ6KeS5a+85pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77yac2Vj5LiN54af44CCXG7pmLLplJnvvJpzZWPigJk9c2VjIHRhbuOAgiJ9LHsiaWQiOiJNLTAwNC01MCIsInRpdGxlIjoiTS0wMDQtNTAg5Y+N5LiJ6KeSIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlj43kuInop5IiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9YXJjY29zKDEveCnlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmvI/lhoXlsYLjgIIiLCJhbmFseXNpcyI6IumTvuW8j+OAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5Y+N5LiJ6KeSIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5Y+N5LiJ6KeSXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5ryP5YaF5bGC44CCXG7pmLLplJnvvJrpk77lvI/jgIIifSx7ImlkIjoiTS0wMDQtNTEiLCJ0aXRsZSI6Ik0tMDA0LTUxIOWPjeS4ieinkivllYYiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWPjeS4ieinkivllYYiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9YXJjdGFuKCh4KzEpLyh4LTEpKeWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuS4jeiuvnXjgIIiLCJhbmFseXNpcyI6IuWFiOiuvnXjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWPjeS4ieinkivllYYiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHlj43kuInop5Ir5ZWGXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5LiN6K6+deOAglxu6Ziy6ZSZ77ya5YWI6K6+deOAgiJ9LHsiaWQiOiJNLTAwNC01MiIsInRpdGxlIjoiTS0wMDQtNTIg5aSN5ZCIIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLlpI3lkIgiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9Y29zW2YoMS94KV3lr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLlpJbkuK3lhoXmt7fjgIIiLCJhbmFseXNpcyI6IuWxguWxguaxguWvvOOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5aSN5ZCIIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5aSN5ZCIXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOeci+acgOmHjOmdoueahOaLrOWPt++8jOaKiuWGheWxgue7k+aenOW9k+aIkOaVtOS9k+OAglxuMi4g6Iul6aKY55uu57uZIGYo5p+Q6KGo6L6+5byPKe+8jOWFiOS7pOaWsOWPmOmHjyB0PeafkOihqOi+vuW8j++8jOWPjeino+WOn+WPmOmHj+OAglxuMy4g5YiG5q615Ye95pWw6KaB5YWI5Yik5pat5YaF5bGC5Ye95pWw5YC86JC95Zyo5ZOq5LiA5q6177yM5YaN5Luj5YWl5aSW5bGC44CCXG40LiDlpJrph43lpI3lkIjlv4Xpobvku47lhoXlkJHlpJbkuIDlsYLkuIDlsYLnrpfvvIzkuI3og73ot7PmraXjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlpJbkuK3lhoXmt7fjgIJcbumYsumUme+8muWxguWxguaxguWvvOOAgiJ9LHsiaWQiOiJNLTAwNC01MyIsInRpdGxlIjoiTS0wMDQtNTMg5LmY56ev5aSN5ZCIIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLkuZjnp6/lpI3lkIgiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6Iuaxgnk9ZihlXih4wrIpKXNpbnjlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLmvI/kuZjnp6/kuIDpobnjgIIiLCJhbmFseXNpcyI6IuS5mOenryvpk77lvI/jgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuS5mOenr+WkjeWQiCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS5mOenr+WkjeWQiFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnnIvmnIDph4zpnaLnmoTmi6zlj7fvvIzmiorlhoXlsYLnu5PmnpzlvZPmiJDmlbTkvZPjgIJcbjIuIOiLpemimOebrue7mSBmKOafkOihqOi+vuW8jynvvIzlhYjku6TmlrDlj5jph48gdD3mn5Dooajovr7lvI/vvIzlj43op6Pljp/lj5jph4/jgIJcbjMuIOWIhuauteWHveaVsOimgeWFiOWIpOaWreWGheWxguWHveaVsOWAvOiQveWcqOWTquS4gOaute+8jOWGjeS7o+WFpeWkluWxguOAglxuNC4g5aSa6YeN5aSN5ZCI5b+F6aG75LuO5YaF5ZCR5aSW5LiA5bGC5LiA5bGC566X77yM5LiN6IO96Lez5q2l44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5ryP5LmY56ev5LiA6aG544CCXG7pmLLplJnvvJrkuZjnp68r6ZO+5byP44CCIn0seyJpZCI6Ik0tMDA0LTU0IiwidGl0bGUiOiJNLTAwNC01NCDnu7zlkIjmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6Iue7vOWQiOaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT3iiJooNC14wrIpK3jCt2FyY3Npbih4LzIp5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5aSa5YWs5byP5re35Lmx44CCIiwiYW5hbHlzaXMiOiLliIbpobnjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIue7vOWQiOaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkee7vOWQiOaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjmiorlh73mlbDmi4blsYLvvJrlpJblsYLjgIHkuK3lsYLjgIHlhoXlsYLliIbliKvmmK/ku4DkuYjjgIJcbjIuIOS5mOenr+eUqCAodXYpJz11J3YrdXYn77yb5ZWG55SoICh1L3YpJz0odSd2LXV2JykvdsKy44CCXG4zLiDlpI3lkIjlh73mlbDmjInpk77lvI/ms5XliJnku47lpJbliLDlhoXkuZjkuIvljrvjgIJcbjQuIOWvueaVsOaxguWvvOmAguWQiOWkhOeQhuS5mOmZpOOAgeW5guaMh+OAgeagueW8j+WkjeadguS5mOenr+OAglxuNS4g5Y+C5pWw5pa556iL55SoIGR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOWFiOaxguWPguaVsOWGjeS7o+eCueOAglxu44CQ5q2j56Gu562U5qGIL+e7k+iuuuOAkVxu5oyJ5LiK6Z2i5q2l6aqk5oqK5Y6f5byP5YyW566A44CB5Luj5YWl5oiW6K+B5piO77yb6Iul5Y6f6aKY5pyJ6YCJ6aG577yM5pyA5ZCO5YaN5LiO6YCJ6aG56YCQ6aG55a+55bqU44CCXG7jgJDmmJPplJnmj5DphpLjgJFcbumUmeWboO+8muWkmuWFrOW8j+a3t+S5seOAglxu6Ziy6ZSZ77ya5YiG6aG544CCIn0seyJpZCI6Ik0tMDA0LTU1IiwidGl0bGUiOiJNLTAwNC01NSDmjIflrprngrnlr7zmlbAiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuaMh+WumueCueWvvOaVsCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT1lXnggYXJjdGFuKGVeeCktbG7iiJooMStlXigyeCkp5ZyoMOWkhOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6IuW/mOS7o+WAvOOAgiIsImFuYWx5c2lzIjoi5pyA5ZCO5LujMOOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5oyH5a6a54K55a+85pWwIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5oyH5a6a54K55a+85pWwXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWvuSBlXnggYXJjdGFuKGVeeCkg55So5LmY56ev5ZKM6ZO+5byP5rGC5a+844CCXG4yLiDlr7zmlbDkuLogZV54IGFyY3RhbihlXngpK2VeeMK3ZV54LygxK2VeKDJ4KSnjgIJcbjMuIOWvuSBsbuKImigxK2VeKDJ4KSkg5YaZ5oiQIDEvMiBsbigxK2VeKDJ4KSnvvIzlr7zmlbDkuLogZV4oMngpLygxK2VeKDJ4KSnjgIJcbjQuIOS7oyB4PTDvvJrnrKzkuIDpg6jliIbkuLogz4AvNCsxLzLvvIznrKzkuozpg6jliIbkuLogMS8y44CCXG41LiDnm7jlh4/lvpcgz4AvNOOAglxu44CQ5q2j56Gu562U5qGI44CR5ZyoIDAg5aSE5a+85pWw5Li6IM+ALzTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5b+Y5Luj5YC844CCXG7pmLLplJnvvJrmnIDlkI7ku6Mw44CCIn0seyJpZCI6Ik0tMDA0LTU2IiwidGl0bGUiOiJNLTAwNC01NiDlr7nmlbDlj43kuInop5IiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWvueaVsOWPjeS4ieinkiIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT0xLzRsbigoMSt4KS8oMS14KSktMS8yYXJjdGFueOWvvOaVsCIsIndyb25nQW5zd2VyIjoiIiwiY29ycmVjdEFuc3dlciI6IiIsInJlYXNvbiI6Imxu5ZWG5LiN5ouG44CCIiwiYW5hbHlzaXMiOiLmi4ZsbuOAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5a+55pWw5Y+N5LiJ6KeSIl0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5a+55pWw5Y+N5LiJ6KeSXG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOaKiuWHveaVsOaLhuWxgu+8muWkluWxguOAgeS4reWxguOAgeWGheWxguWIhuWIq+aYr+S7gOS5iOOAglxuMi4g5LmY56ev55SoICh1diknPXUndit1difvvJvllYbnlKggKHUvdiknPSh1J3YtdXYnKS92wrLjgIJcbjMuIOWkjeWQiOWHveaVsOaMiemTvuW8j+azleWImeS7juWkluWIsOWGheS5mOS4i+WOu+OAglxuNC4g5a+55pWw5rGC5a+86YCC5ZCI5aSE55CG5LmY6Zmk44CB5bmC5oyH44CB5qC55byP5aSN5p2C5LmY56ev44CCXG41LiDlj4LmlbDmlrnnqIvnlKggZHkvZHg9KGR5L2R0KS8oZHgvZHQp77yM5YWI5rGC5Y+C5pWw5YaN5Luj54K544CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77yabG7llYbkuI3mi4bjgIJcbumYsumUme+8muaLhmxu44CCIn0seyJpZCI6Ik0tMDA0LTU3IiwidGl0bGUiOiJNLTAwNC01NyDnu7zlkIjmsYLlr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6Iue7vOWQiOaxguWvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5rGCeT14wrJzaW4oMS94KSsyeC8oMS14wrIp5a+85pWwIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5YaF5bGCL+WVhuWFrOW8j+a8j+OAgiIsImFuYWx5c2lzIjoi5YiG6aG544CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLnu7zlkIjmsYLlr7wiXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHnu7zlkIjmsYLlr7xcbuOAkOino+mimOatpemqpOOAkVxuMS4g5YWI5oqK5Ye95pWw5ouG5bGC77ya5aSW5bGC44CB5Lit5bGC44CB5YaF5bGC5YiG5Yir5piv5LuA5LmI44CCXG4yLiDkuZjnp6/nlKggKHV2KSc9dSd2K3V2J++8m+WVhueUqCAodS92KSc9KHUndi11dicpL3bCsuOAglxuMy4g5aSN5ZCI5Ye95pWw5oyJ6ZO+5byP5rOV5YiZ5LuO5aSW5Yiw5YaF5LmY5LiL5Y6744CCXG40LiDlr7nmlbDmsYLlr7zpgILlkIjlpITnkIbkuZjpmaTjgIHluYLmjIfjgIHmoLnlvI/lpI3mnYLkuZjnp6/jgIJcbjUuIOWPguaVsOaWueeoi+eUqCBkeS9keD0oZHkvZHQpLyhkeC9kdCnvvIzlhYjmsYLlj4LmlbDlho3ku6PngrnjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlhoXlsYIv5ZWG5YWs5byP5ryP44CCXG7pmLLplJnvvJrliIbpobnjgIIifSx7ImlkIjoiTS0wMDQtNTgiLCJ0aXRsZSI6Ik0tMDA0LTU4IOWIhuauteaxguWvvCIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi5YiG5q615rGC5a+8Iiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiLliIbmrrV4wrJzaW4oMS94KeS4jjDnmoTlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiIw54K55ryP44CCIiwiYW5hbHlzaXMiOiLlrprkuYnms5XjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWIhuauteaxguWvvCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeWIhuauteaxguWvvFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlpoLmnpzogIPlr7zmlbDlrprkuYnvvIzlhpnlh7ogbGltKGjihpIwKVtmKHgwK2gpLWYoeDApXS9o44CCXG4yLiDlkKvmoLnlvI/lhYjmnInnkIbljJbvvIzlkKvnu53lr7nlgLzmiJbliIbmrrXopoHliIblt6blj7PmnoHpmZDjgIJcbjMuIOWIhuauteeCueWPr+WvvOW/hemhu+WFiOi/nue7re+8jOWGjeavlOi+g+W3puWvvOaVsOWSjOWPs+WvvOaVsOOAglxuNC4g5rGC5Y+C5pWw6aKY6YCa5bi45YWI55Sx6L+e57ut5oCn5rGC5LiA5Liq5Y+C5pWw77yM5YaN55Sx5bem5Y+z5a+85pWw55u4562J5rGC5Y+m5LiA5Liq5Y+C5pWw44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77yaMOeCuea8j+OAglxu6Ziy6ZSZ77ya5a6a5LmJ5rOV44CCIn0seyJpZCI6Ik0tMDA0LTU5IiwidGl0bGUiOiJNLTAwNC01OSDliIbmrrXlj6/lr7wiLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWIhuauteWPr+WvvCIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5YiG5q61c2lueOS4jmxuKDEreCnnmoTlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiLlt6blj7Plr7zmlbDmvI/jgIIiLCJhbmFseXNpcyI6IuWIhueVjOeCueWNleeul+OAgiIsInRhZ3MiOlsiTS0wMDQiLCLlr7zmlbDnu7zlkIjjgIHlr7nmlbDmsYLlr7zjgIHpq5jpmLblr7zmlbDjgIHnibnmrormnoHpmZAoNjPpopgpIiwi5YiG5q615Y+v5a+8Il0sImltYWdlcyI6W10sInJldmlld3MiOltdLCJjcmVhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInNvbHV0aW9uIjoi44CQ6ICD54K544CR5YiG5q615Y+v5a+8XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWmguaenOiAg+WvvOaVsOWumuS5ie+8jOWGmeWHuiBsaW0oaOKGkjApW2YoeDAraCktZih4MCldL2jjgIJcbjIuIOWQq+agueW8j+WFiOacieeQhuWMlu+8jOWQq+e7neWvueWAvOaIluWIhuauteimgeWIhuW3puWPs+aegemZkOOAglxuMy4g5YiG5q6154K55Y+v5a+85b+F6aG75YWI6L+e57ut77yM5YaN5q+U6L6D5bem5a+85pWw5ZKM5Y+z5a+85pWw44CCXG40LiDmsYLlj4LmlbDpopjpgJrluLjlhYjnlLHov57nu63mgKfmsYLkuIDkuKrlj4LmlbDvvIzlho3nlLHlt6blj7Plr7zmlbDnm7jnrYnmsYLlj6bkuIDkuKrlj4LmlbDjgIJcbuOAkOato+ehruetlOahiC/nu5PorrrjgJFcbuaMieS4iumdouatpemqpOaKiuWOn+W8j+WMlueugOOAgeS7o+WFpeaIluivgeaYju+8m+iLpeWOn+mimOaciemAiemhue+8jOacgOWQjuWGjeS4jumAiemhuemAkOmhueWvueW6lOOAglxu44CQ5piT6ZSZ5o+Q6YaS44CRXG7plJnlm6DvvJrlt6blj7Plr7zmlbDmvI/jgIJcbumYsumUme+8muWIhueVjOeCueWNleeul+OAgiJ9LHsiaWQiOiJNLTAwNC02MCIsInRpdGxlIjoiTS0wMDQtNjAg5LmY56ev5aSN5ZCIIiwic3ViamVjdCI6IumrmOaVsCIsImNoYXB0ZXIiOiLkuZjnp6/lpI3lkIgiLCJzb3VyY2UiOiLkvZzkuJoiLCJ3cm9uZ0F0IjoiMjAyNi0wNi0xMSIsIm5leHRSZXZpZXciOiIyMDI2LTA2LTE0Iiwic3RhdHVzIjoibmV3IiwiZGlmZmljdWx0eSI6IjIiLCJxdWVzdGlvbiI6IuaxglsoMS14KS8oMSt4KV1lXuKImnjlr7zmlbAiLCJ3cm9uZ0Fuc3dlciI6IiIsImNvcnJlY3RBbnN3ZXIiOiIiLCJyZWFzb24iOiJlXuKImnjmvI/pk77lvI/jgIIiLCJhbmFseXNpcyI6IuS5mOenryvpk77lvI/jgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuS5mOenr+WkjeWQiCJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkeS5mOenr+WkjeWQiFxu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDlhYjnnIvmnIDph4zpnaLnmoTmi6zlj7fvvIzmiorlhoXlsYLnu5PmnpzlvZPmiJDmlbTkvZPjgIJcbjIuIOiLpemimOebrue7mSBmKOafkOihqOi+vuW8jynvvIzlhYjku6TmlrDlj5jph48gdD3mn5Dooajovr7lvI/vvIzlj43op6Pljp/lj5jph4/jgIJcbjMuIOWIhuauteWHveaVsOimgeWFiOWIpOaWreWGheWxguWHveaVsOWAvOiQveWcqOWTquS4gOaute+8jOWGjeS7o+WFpeWkluWxguOAglxuNC4g5aSa6YeN5aSN5ZCI5b+F6aG75LuO5YaF5ZCR5aSW5LiA5bGC5LiA5bGC566X77yM5LiN6IO96Lez5q2l44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77yaZV7iiJp45ryP6ZO+5byP44CCXG7pmLLplJnvvJrkuZjnp68r6ZO+5byP44CCIn0seyJpZCI6Ik0tMDA0LTYxIiwidGl0bGUiOiJNLTAwNC02MSDov4flrprngrnliIfnur8iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6Iui/h+WumueCueWIh+e6vyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoieT14XigzLzIp6YCa6L+H54K5KDAsLTQp5YiH57q/5pa556iLIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi6L+H54K55b2T5YiH54K544CCIiwiYW5hbHlzaXMiOiLlj6borr7liIfngrnjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIui/h+WumueCueWIh+e6vyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOiAg+eCueOAkei/h+WumueCueWIh+e6v1xu44CQ6Kej6aKY5q2l6aqk44CRXG4xLiDorr7liIfngrnmqKrlnZDmoIfkuLogdD4w77yM5YiH54K55Li6ICh0LHReKDMvMikp44CCXG4yLiDmm7Lnur/lr7zmlbAgeSc9KDMvMiniiJp044CCXG4zLiDliIfnur/mlrnnqIvvvJp5LXReKDMvMik9KDMvMiniiJp0KHgtdCnjgIJcbjQuIOS7o+WFpeeCuSAoMCwtNCnvvJotNC10XigzLzIpPS0oMy8yKXReKDMvMinjgIJcbjUuIOW+lyB0XigzLzIpPTjvvIzmiYDku6UgdD0044CCXG42LiDmlpznjofkuLogM++8jOWIh+e6v+S4uiB5LTg9Myh4LTQp44CCXG7jgJDmraPnoa7nrZTmoYjjgJF5PTN4LTTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya6L+H54K55b2T5YiH54K544CCXG7pmLLplJnvvJrlj6borr7liIfngrnjgIIifSx7ImlkIjoiTS0wMDQtNjIiLCJ0aXRsZSI6Ik0tMDA0LTYyIOebuOWIhyIsInN1YmplY3QiOiLpq5jmlbAiLCJjaGFwdGVyIjoi55u45YiHIiwic291cmNlIjoi5L2c5LiaIiwid3JvbmdBdCI6IjIwMjYtMDYtMTEiLCJuZXh0UmV2aWV3IjoiMjAyNi0wNi0xNCIsInN0YXR1cyI6Im5ldyIsImRpZmZpY3VsdHkiOiIyIiwicXVlc3Rpb24iOiJ5PWHiiJp45LiOeT1sbnjnm7jliIfvvIzmsYJhIiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5ryP5pac546H55u4562J44CCIiwiYW5hbHlzaXMiOiLlhbHngrkr5YWx5pac546H44CCIiwidGFncyI6WyJNLTAwNCIsIuWvvOaVsOe7vOWQiOOAgeWvueaVsOaxguWvvOOAgemrmOmYtuWvvOaVsOOAgeeJueauiuaegemZkCg2M+mimCkiLCLnm7jliIciXSwiaW1hZ2VzIjpbXSwicmV2aWV3cyI6W10sImNyZWF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTExVDEyOjAwOjAwIiwic29sdXRpb24iOiLjgJDogIPngrnjgJHkuKTmm7Lnur/nm7jliIfmsYLlj4LmlbBcbuOAkOino+mimOatpemqpOOAkVxuMS4g6K6+5YiH54K55qiq5Z2Q5qCH5Li6IHjigoA+MOOAglxuMi4g5Ye95pWw5YC855u4562J77yaYeKImnjigoA9bG544oKA44CCXG4zLiDlr7zmlbDnm7jnrYnvvJphLygy4oiaeOKCgCk9MS944oKA44CCXG40LiDnlLHlr7zmlbDnm7jnrYnlvpcgYT0yL+KImnjigoDjgIJcbjUuIOS7o+WFpeWHveaVsOWAvOebuOetie+8mjI9bG544oKA77yM5omA5LulIHjigoA9ZcKy44CCXG42LiBhPTIvZeOAglxu44CQ5q2j56Gu562U5qGI44CRYT0yL2XjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5ryP5pac546H55u4562J44CCXG7pmLLplJnvvJrlhbHngrkr5YWx5pac546H44CCIn0seyJpZCI6Ik0tMDA0LTYzIiwidGl0bGUiOiJNLTAwNC02MyDlj4LmlbDliIfnur8iLCJzdWJqZWN0Ijoi6auY5pWwIiwiY2hhcHRlciI6IuWPguaVsOWIh+e6vyIsInNvdXJjZSI6IuS9nOS4miIsIndyb25nQXQiOiIyMDI2LTA2LTExIiwibmV4dFJldmlldyI6IjIwMjYtMDYtMTQiLCJzdGF0dXMiOiJuZXciLCJkaWZmaWN1bHR5IjoiMiIsInF1ZXN0aW9uIjoi5Y+C5pWw5pa556iLeD0ydMKyK3QseT1sbigxLXQp5oyH5a6a5aSE5YiH57q/Iiwid3JvbmdBbnN3ZXIiOiIiLCJjb3JyZWN0QW5zd2VyIjoiIiwicmVhc29uIjoi5pyq5YWI5a6adOOAgiIsImFuYWx5c2lzIjoi5YWI5Y+C5pWw5ZCO5pac546H44CCIOaAu+WkjeebmO+8muacgOWuueaYk+WPjeWkjemUmeeahDEw57G7IDEuIOWumuS5ieWfn+adoeS7tua8j+WGme+8muagueWPt+OAgeWIhuavjeOAgeWvueaVsOOAgeWPjeS4ieinkuOAgeS4ieinkuWRqOacn+W/hemhu+mAkOmhueWIl+OAgiAyLiDlpI3lkIjlh73mlbDlrprkuYnln5/pobrluo/plJnor6/vvJrlhYjmsYIgZih4KSDmnKzouqvlrprkuYnln5/vvIzlho3lpITnkIbmlrDlhoXlsYLjgIIgMy4g5p6B6ZmQ5YWs5byP5re35reG77yac2luYXgvc2luYnjjgIExLWNvc3jjgIHnrKzkuozph43opoHmnoHpmZDopoHlvaLmiJDmnaHku7blj43lsITjgIIgNC4g6L+e57ut5LiO5Y+v5a+85YWz57O777ya5Y+v5a+85LiA5a6a6L+e57ut77yM6L+e57ut5LiN5LiA5a6a5Y+v5a+877yb6Ze05pat54K55LiN6IO95Y+v5a+844CCIDUuIOWIhuauteWHveaVsO+8muWIhueVjOeCueW/hemhu+WNleeLrOajgOafpeWHveaVsOWAvOOAgeW3puWPs+aegemZkOOAgeW3puWPs+WvvOaVsOOAgiA2LiDliIfnur/popjvvJrov4fngrnkuI3nrYnkuo7liIfngrnvvJvliIfngrnopoHlj6borr7jgIIgNy4g55u45YiH6aKY77ya5YWx54K5ICsg5YWx5pac546H77yM5LiN6KaB5oOz5oiQ5rOV57q/6Zeu6aKY44CCIDguIOWPguaVsOaWueeoi++8mmR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOe7mXjlhYjop6N044CCIDkuIOWkjeadguaxguWvvO+8muS5mOenr+OAgeWVhuOAgemTvuW8j+OAgeWPjeS4ieinkuOAgeS4ieinkuWFrOW8j+imgeWIhuWxguWGmeOAgiAxMC4g5a+55pWw5rGC5a+85LiO6auY6Zi25a+85pWw77yadSh4KV52KHgp44CB5qC55byP5YiG5byP5LmY6Zmk5YWI5Y+WbG7vvJvpq5jpmLblhYjlhpnliY3kuInpmLbmib7op4TlvovjgIIiLCJ0YWdzIjpbIk0tMDA0Iiwi5a+85pWw57u85ZCI44CB5a+55pWw5rGC5a+844CB6auY6Zi25a+85pWw44CB54m55q6K5p6B6ZmQKDYz6aKYKSIsIuWPguaVsOWIh+e6vyJdLCJpbWFnZXMiOltdLCJyZXZpZXdzIjpbXSwiY3JlYXRlZEF0IjoiMjAyNi0wNi0xMVQxMjowMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDYtMTFUMTI6MDA6MDAiLCJzb2x1dGlvbiI6IuOAkOmcgOihpeWujOaVtOWOn+mimOOAkeW9k+WJjemimOW5sue8uuWwkeWFt+S9k+eCueOAgeWPguaVsOWAvOaIluWujOaVtOihqOi+vuW8j++8m+WFiOaMieS4i+mdoua1geeoi+WBmu+8jOihpem9kOWOn+mimOWQjuWGjeS7o+WFpeacgOWQjuS4gOatpeOAglxu44CQ6ICD54K544CR5Y+C5pWw5YiH57q/XG7jgJDop6PpopjmraXpqqTjgJFcbjEuIOWFiOehruWumuWIh+eCue+8m+mimOebruivtOKAnOi/h+afkOeCueKAneaXtu+8jOi/meS4queCueS4jeS4gOWumuaYr+WIh+eCueOAglxuMi4g55So5a+85pWw5rGC5YiH57q/5pac546HIGs9ZicoeDAp44CCXG4zLiDliIfnur/mlrnnqIvlhpkgeS15MD1rKHgteDAp44CCXG40LiDms5Xnur/mlpznjofmmK8gLTEva++8m+iLpSBrPTAg5oiW5LiN5a2Y5Zyo77yM6KaB5Y2V54us6K6o6K665rC05bmzL+erluebtOaDheWGteOAglxuNS4g5Lik5puy57q/55u45YiH6KaB5ZCM5pe25ruh6Laz5Ye95pWw5YC855u4562J5ZKM5a+85pWw5YC855u4562J44CCXG7jgJDmraPnoa7nrZTmoYgv57uT6K6644CRXG7mjInkuIrpnaLmraXpqqTmiorljp/lvI/ljJbnroDjgIHku6PlhaXmiJbor4HmmI7vvJvoi6Xljp/popjmnInpgInpobnvvIzmnIDlkI7lho3kuI7pgInpobnpgJDpobnlr7nlupTjgIJcbuOAkOaYk+mUmeaPkOmGkuOAkVxu6ZSZ5Zug77ya5pyq5YWI5a6adOOAglxu6Ziy6ZSZ77ya5YWI5Y+C5pWw5ZCO5pac546H44CCIOaAu+WkjeebmO+8muacgOWuueaYk+WPjeWkjemUmeeahDEw57G7IDEuIOWumuS5ieWfn+adoeS7tua8j+WGme+8muagueWPt+OAgeWIhuavjeOAgeWvueaVsOOAgeWPjeS4ieinkuOAgeS4ieinkuWRqOacn+W/hemhu+mAkOmhueWIl+OAgiAyLiDlpI3lkIjlh73mlbDlrprkuYnln5/pobrluo/plJnor6/vvJrlhYjmsYIgZih4KSDmnKzouqvlrprkuYnln5/vvIzlho3lpITnkIbmlrDlhoXlsYLjgIIgMy4g5p6B6ZmQ5YWs5byP5re35reG77yac2luYXgvc2luYnjjgIExLWNvc3jjgIHnrKzkuozph43opoHmnoHpmZDopoHlvaLmiJDmnaHku7blj43lsITjgIIgNC4g6L+e57ut5LiO5Y+v5a+85YWz57O777ya5Y+v5a+85LiA5a6a6L+e57ut77yM6L+e57ut5LiN5LiA5a6a5Y+v5a+877yb6Ze05pat54K55LiN6IO95Y+v5a+844CCIDUuIOWIhuauteWHveaVsO+8muWIhueVjOeCueW/hemhu+WNleeLrOajgOafpeWHveaVsOWAvOOAgeW3puWPs+aegemZkOOAgeW3puWPs+WvvOaVsOOAgiA2LiDliIfnur/popjvvJrov4fngrnkuI3nrYnkuo7liIfngrnvvJvliIfngrnopoHlj6borr7jgIIgNy4g55u45YiH6aKY77ya5YWx54K5ICsg5YWx5pac546H77yM5LiN6KaB5oOz5oiQ5rOV57q/6Zeu6aKY44CCIDguIOWPguaVsOaWueeoi++8mmR5L2R4PShkeS9kdCkvKGR4L2R0Ke+8jOe7mXjlhYjop6N044CCIDkuIOWkjeadguaxguWvvO+8muS5mOenr+OAgeWVhuOAgemTvuW8j+OAgeWPjeS4ieinkuOAgeS4ieinkuWFrOW8j+imgeWIhuWxguWGmeOAgiAxMC4g5a+55pWw5rGC5a+85LiO6auY6Zi25a+85pWw77yadSh4KV52KHgp44CB5qC55byP5YiG5byP5LmY6Zmk5YWI5Y+WbG7vvJvpq5jpmLblhYjlhpnliY3kuInpmLbmib7op4TlvovjgIIifV0=";
+const BUILTIN_RECORDS = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(BUILTIN_RECORDS_BASE64), (char) => char.charCodeAt(0))));
+let shouldPersistLoadedRecords = false;
+let suppressCloudSync = false;
+let cloudSyncTimer = null;
 
 const els = {
+  recordsList: document.querySelector("#recordsList"),
+  reviewQueue: document.querySelector("#reviewQueue"),
+  subjectStrip: document.querySelector("#subjectStrip"),
   totalCount: document.querySelector("#totalCount"),
   dueCount: document.querySelector("#dueCount"),
-  todayCount: document.querySelector("#todayCount"),
-  doneTodayCount: document.querySelector("#doneTodayCount"),
-  examDays: document.querySelector("#examDays"),
-  examDateInput: document.querySelector("#examDateInput"),
-  todayNewTarget: document.querySelector("#todayNewTarget"),
-  todayReviewTarget: document.querySelector("#todayReviewTarget"),
-  todayNewHint: document.querySelector("#todayNewHint"),
-  todayReviewHint: document.querySelector("#todayReviewHint"),
-  importantCount: document.querySelector("#importantCount"),
-  estimateMinutes: document.querySelector("#estimateMinutes"),
-  clockNow: document.querySelector("#clockNow"),
-  sprintStatus: document.querySelector("#sprintStatus"),
-  dailyReport: document.querySelector("#dailyReport"),
-  activeCard: document.querySelector("#activeCard"),
-  todayTimeline: document.querySelector("#todayTimeline"),
-  groupProgress: document.querySelector("#groupProgress"),
-  wordList: document.querySelector("#wordList"),
-  wordForm: document.querySelector("#wordForm"),
-  termInput: document.querySelector("#termInput"),
-  meaningInput: document.querySelector("#meaningInput"),
-  phraseInput: document.querySelector("#phraseInput"),
-  tagInput: document.querySelector("#tagInput"),
-  thirdPersonInput: document.querySelector("#thirdPersonInput"),
-  pastTenseInput: document.querySelector("#pastTenseInput"),
-  pastParticipleInput: document.querySelector("#pastParticipleInput"),
-  noteInput: document.querySelector("#noteInput"),
-  clearFormButton: document.querySelector("#clearFormButton"),
-  bulkInput: document.querySelector("#bulkInput"),
-  bulkAddButton: document.querySelector("#bulkAddButton"),
-  clearBulkButton: document.querySelector("#clearBulkButton"),
+  monthCount: document.querySelector("#monthCount"),
+  masteredCount: document.querySelector("#masteredCount"),
   searchInput: document.querySelector("#searchInput"),
+  subjectFilter: document.querySelector("#subjectFilter"),
   statusFilter: document.querySelector("#statusFilter"),
-  importButton: document.querySelector("#importButton"),
+  tagFilter: document.querySelector("#tagFilter"),
+  sortSelect: document.querySelector("#sortSelect"),
+  dueOnlyToggle: document.querySelector("#dueOnlyToggle"),
+  clearFiltersButton: document.querySelector("#clearFiltersButton"),
+  newRecordButton: document.querySelector("#newRecordButton"),
+  installAppButton: document.querySelector("#installAppButton"),
+  cloudSyncButton: document.querySelector("#cloudSyncButton"),
   exportButton: document.querySelector("#exportButton"),
+  importButton: document.querySelector("#importButton"),
   importInput: document.querySelector("#importInput"),
-  startNewButton: document.querySelector("#startNewButton"),
-  batchLearnButton: document.querySelector("#batchLearnButton"),
-  sprintButton: document.querySelector("#sprintButton"),
-  focusDueButton: document.querySelector("#focusDueButton"),
-  dictationOrderSelect: document.querySelector("#dictationOrderSelect"),
-  copyPlanButton: document.querySelector("#copyPlanButton"),
-  dueModeButton: document.querySelector("#dueModeButton"),
-  newModeButton: document.querySelector("#newModeButton"),
-  allModeButton: document.querySelector("#allModeButton"),
+  editorDialog: document.querySelector("#editorDialog"),
+  reviewDialog: document.querySelector("#reviewDialog"),
+  cloudDialog: document.querySelector("#cloudDialog"),
+  recordForm: document.querySelector("#recordForm"),
+  reviewForm: document.querySelector("#reviewForm"),
+  cloudForm: document.querySelector("#cloudForm"),
+  closeEditorButton: document.querySelector("#closeEditorButton"),
+  cancelEditorButton: document.querySelector("#cancelEditorButton"),
+  deleteRecordButton: document.querySelector("#deleteRecordButton"),
+  closeReviewButton: document.querySelector("#closeReviewButton"),
+  cancelReviewButton: document.querySelector("#cancelReviewButton"),
+  closeCloudButton: document.querySelector("#closeCloudButton"),
+  cancelCloudButton: document.querySelector("#cancelCloudButton"),
+  loadCloudButton: document.querySelector("#loadCloudButton"),
+  copyPublicLinkButton: document.querySelector("#copyPublicLinkButton"),
+  cloudSlugInput: document.querySelector("#cloudSlugInput"),
+  cloudNameInput: document.querySelector("#cloudNameInput"),
+  cloudPinInput: document.querySelector("#cloudPinInput"),
+  cloudPublicInput: document.querySelector("#cloudPublicInput"),
+  cloudStatus: document.querySelector("#cloudStatus"),
+  dialogTitle: document.querySelector("#dialogTitle"),
+  reviewTitle: document.querySelector("#reviewTitle"),
+  imageInput: document.querySelector("#imageInput"),
+  imagePreview: document.querySelector("#imagePreview"),
+  clearImagesButton: document.querySelector("#clearImagesButton"),
   toast: document.querySelector("#toast"),
 };
 
-const state = {
-  words: loadWords(),
-  settings: loadSettings(),
-  mode: "due",
-  practiceMode: "card",
-  dictationOrder: "due",
-  activeGroup: "all",
-  sprint: {
-    active: false,
-    startedAt: "",
-    endsAt: "",
-    completed: 0,
-  },
-  activeId: null,
-  answerVisible: false,
-  spellingDraft: "",
-  spellingResult: null,
-  formDrafts: {
-    third: "",
-    past: "",
-    participle: "",
-  },
-  formResult: null,
-  lastAutoSpokenId: null,
-  query: "",
-  filter: "all",
+const fields = {
+  id: document.querySelector("#recordId"),
+  title: document.querySelector("#titleInput"),
+  subject: document.querySelector("#subjectInput"),
+  chapter: document.querySelector("#chapterInput"),
+  source: document.querySelector("#sourceInput"),
+  wrongAt: document.querySelector("#wrongAtInput"),
+  nextReview: document.querySelector("#nextReviewInput"),
+  status: document.querySelector("#statusInput"),
+  difficulty: document.querySelector("#difficultyInput"),
+  question: document.querySelector("#questionInput"),
+  wrongAnswer: document.querySelector("#wrongAnswerInput"),
+  correctAnswer: document.querySelector("#correctAnswerInput"),
+  reason: document.querySelector("#reasonInput"),
+  analysis: document.querySelector("#analysisInput"),
+  tags: document.querySelector("#tagsInput"),
 };
+
+const reviewFields = {
+  id: document.querySelector("#reviewRecordId"),
+  date: document.querySelector("#reviewDateInput"),
+  result: document.querySelector("#reviewResultInput"),
+  nextDate: document.querySelector("#reviewNextDateInput"),
+  status: document.querySelector("#reviewStatusInput"),
+  note: document.querySelector("#reviewNoteInput"),
+};
+
+const state = {
+  records: isPublicView() ? cloneBuiltinRecords() : loadRecords(),
+  filters: {
+    query: "",
+    subject: "all",
+    status: "all",
+    tag: "all",
+    dueOnly: false,
+    sort: "newest",
+  },
+  pendingImages: [],
+  expandedSolutionIds: new Set(),
+};
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysISO(dateISO, days) {
+  const base = dateISO ? new Date(`${dateISO}T00:00:00`) : new Date();
+  base.setDate(base.getDate() + days);
+  return base.toISOString().slice(0, 10);
+}
 
 function createId() {
   if (crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  return `word-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function nowDate() {
-  return new Date();
-}
-
-function todayKey(date = nowDate()) {
-  return date.toISOString().slice(0, 10);
-}
-
-function dateInputValue(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function defaultExamDate() {
-  const now = nowDate();
-  const currentYearExam = new Date(now.getFullYear(), 3, 18);
-  const exam = currentYearExam >= now ? currentYearExam : new Date(now.getFullYear() + 1, 3, 18);
-  return dateInputValue(exam);
-}
-
-function normalizeText(value) {
-  return String(value || "").trim();
-}
-
-function mergeStudyText(current, incoming) {
-  const currentText = normalizeText(current);
-  const incomingText = normalizeText(incoming);
-  if (!incomingText) {
-    return currentText;
-  }
-  if (!currentText) {
-    return incomingText;
-  }
-  return incomingText
-    .split(/[；;]/)
-    .map(normalizeText)
-    .filter(Boolean)
-    .reduce((merged, item) => (merged.includes(item) ? merged : `${merged}；${item}`), currentText);
-}
-
-function normalizeSpelling(value) {
-  return normalizeText(value)
-    .toLowerCase()
-    .replace(/[’‘`]/g, "'")
-    .replace(/[^a-z0-9'\s-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function isSpellingCorrect(input, word) {
-  return normalizeSpelling(input) === normalizeSpelling(word.term);
-}
-
-const IRREGULAR_VERB_FORMS = {
-  be: { third: "is", past: "was", participle: "been" },
-  have: { third: "has", past: "had", participle: "had" },
-  do: { third: "does", past: "did", participle: "done" },
-  go: { third: "goes", past: "went", participle: "gone" },
-  buy: { past: "bought", participle: "bought" },
-  sell: { past: "sold", participle: "sold" },
-  take: { past: "took", participle: "taken" },
-  know: { past: "knew", participle: "known" },
-  see: { past: "saw", participle: "seen" },
-  feel: { past: "felt", participle: "felt" },
-  hear: { past: "heard", participle: "heard" },
-  speak: { past: "spoke", participle: "spoken" },
-  tell: { past: "told", participle: "told" },
-  read: { past: "read", participle: "read" },
-  say: { third: "says", past: "said", participle: "said" },
-  give: { past: "gave", participle: "given" },
-  make: { past: "made", participle: "made" },
-  write: { past: "wrote", participle: "written" },
-  come: { past: "came", participle: "come" },
-  run: { past: "ran", participle: "run" },
-  eat: { past: "ate", participle: "eaten" },
-  drink: { past: "drank", participle: "drunk" },
-  begin: { past: "began", participle: "begun" },
-  swim: { past: "swam", participle: "swum" },
-  lend: { past: "lent", participle: "lent" },
-  spend: { past: "spent", participle: "spent" },
-  cost: { past: "cost", participle: "cost" },
-  pay: { third: "pays", past: "paid", participle: "paid" },
-  bring: { past: "brought", participle: "brought" },
-  think: { past: "thought", participle: "thought" },
-  teach: { past: "taught", participle: "taught" },
-  catch: { past: "caught", participle: "caught" },
-  keep: { past: "kept", participle: "kept" },
-  sleep: { past: "slept", participle: "slept" },
-  leave: { past: "left", participle: "left" },
-  meet: { past: "met", participle: "met" },
-  get: { past: "got", participle: "gotten" },
-  forget: { past: "forgot", participle: "forgotten" },
-  understand: { past: "understood", participle: "understood" },
-  stand: { past: "stood", participle: "stood" },
-  choose: { past: "chose", participle: "chosen" },
-  break: { past: "broke", participle: "broken" },
-  drive: { past: "drove", participle: "driven" },
-  ride: { past: "rode", participle: "ridden" },
-  build: { past: "built", participle: "built" },
-  send: { past: "sent", participle: "sent" },
-  sit: { past: "sat", participle: "sat" },
-  cut: { past: "cut", participle: "cut" },
-  put: { past: "put", participle: "put" },
-  let: { past: "let", participle: "let" },
-};
-
-function emptyVerbForms() {
-  return { third: "", past: "", participle: "" };
-}
-
-function canInferVerbForms(term) {
-  return /^[a-z]+$/i.test(normalizeText(term));
-}
-
-function thirdPersonForm(base) {
-  if (/(ch|sh|s|x|z|o)$/i.test(base)) {
-    return `${base}es`;
-  }
-  if (/[^aeiou]y$/i.test(base)) {
-    return `${base.slice(0, -1)}ies`;
-  }
-  return `${base}s`;
-}
-
-function regularPastForm(base) {
-  if (/e$/i.test(base)) {
-    return `${base}d`;
-  }
-  if (/[^aeiou]y$/i.test(base)) {
-    return `${base.slice(0, -1)}ied`;
-  }
-  if (/[^aeiou][aeiou][^aeiouwxy]$/i.test(base) && base.length <= 6) {
-    return `${base}${base.slice(-1)}ed`;
-  }
-  return `${base}ed`;
-}
-
-function inferVerbForms(term) {
-  const base = normalizeText(term).toLowerCase();
-  if (!canInferVerbForms(base)) {
-    return emptyVerbForms();
-  }
-  const irregular = IRREGULAR_VERB_FORMS[base] || {};
-  const past = irregular.past || regularPastForm(base);
-  return {
-    third: irregular.third || thirdPersonForm(base),
-    past,
-    participle: irregular.participle || past,
-  };
-}
-
-function verbForms(word) {
-  const inferred = inferVerbForms(word.term);
-  const saved = word.forms || {};
-  return {
-    third: normalizeText(saved.third || saved.thirdPerson || word.thirdPerson || inferred.third),
-    past: normalizeText(saved.past || saved.pastTense || word.pastTense || inferred.past),
-    participle: normalizeText(saved.participle || saved.pastParticiple || word.pastParticiple || inferred.participle),
-  };
-}
-
-function hasVerbForms(word) {
-  const forms = verbForms(word);
-  return Boolean(forms.third || forms.past || forms.participle);
-}
-
-function isVerbFormsCorrect(drafts, word) {
-  const forms = verbForms(word);
-  const keys = ["third", "past", "participle"].filter((key) => forms[key]);
-  return keys.length > 0 && keys.every((key) => normalizeSpelling(drafts[key]) === normalizeSpelling(forms[key]));
-}
-
-function verbFormsAnswerText(word) {
-  const forms = verbForms(word);
-  return `三单：${forms.third || "-"}  过去式：${forms.past || "-"}  过去分词：${forms.participle || "-"}`;
-}
-
-function speechSupported() {
-  return Boolean(
-    typeof window !== "undefined" &&
-    window.speechSynthesis &&
-    window.SpeechSynthesisUtterance
-  );
-}
-
-function speakTerm(term, options = {}) {
-  const text = normalizeText(term);
-  if (!text) {
-    return false;
-  }
-  if (!speechSupported()) {
-    if (!options.silent) {
-      showToast("当前浏览器不支持自动读音");
-    }
-    return false;
-  }
-  window.speechSynthesis.cancel();
-  const utterance = new window.SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = 0.82;
-  utterance.pitch = 1;
-  window.speechSynthesis.speak(utterance);
-  return true;
+  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function escapeHTML(value) {
@@ -4212,89 +136,164 @@ function escapeHTML(value) {
     .replaceAll("'", "&#39;");
 }
 
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function formatMathText(value) {
+  return String(value || "").split("\n").map(formatMathLine).join("<br>");
 }
 
-function loadSettings() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+function formatQuestionText(value) {
+  const parsed = splitChoiceQuestion(value);
+  if (!parsed) {
+    return `<p>${formatMathText(value)}</p>`;
+  }
+  const options = parsed.options.map((option) => `
+    <div class="choice-option">
+      <strong>${option.label}</strong>
+      <span>${formatMathText(option.text)}</span>
+    </div>
+  `).join("");
+  return `
+    <p class="question-stem">${formatMathText(parsed.stem)}</p>
+    <div class="choice-grid">${options}</div>
+  `;
+}
+
+function splitChoiceQuestion(value) {
+  const text = String(value || "").trim();
+  const matches = [...text.matchAll(/([A-D])\.\s*/g)];
+  if (matches.length < 2 || matches[0][1] !== "A") {
+    return null;
+  }
+  const labels = matches.map((match) => match[1]);
+  const ordered = labels.every((label, index) => label.charCodeAt(0) === 65 + index);
+  if (!ordered) {
+    return null;
+  }
+  const stem = text.slice(0, matches[0].index).trim();
+  const options = matches.map((match, index) => {
+    const start = match.index + match[0].length;
+    const end = index + 1 < matches.length ? matches[index + 1].index : text.length;
     return {
-      examDate: parsed.examDate || defaultExamDate(),
+      label: match[1],
+      text: text.slice(start, end).trim(),
     };
-  } catch {
-    return { examDate: defaultExamDate() };
-  }
+  });
+  return { stem, options };
 }
 
-function saveSettings() {
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
-  } catch {
-    showToast("设置保存失败");
-  }
-}
+function formatMathLine(line) {
+  const rendered = [];
+  const stash = (html) => `@@MATH${rendered.push(html) - 1}@@`;
+  const term = String.raw`(?:\[[^\]\n]+\]|\([^()\n]+\)|√\([^()\n]+\)|∛\([^()\n]+\)|\|[^|\n]+\||[A-Za-zΑ-Ωα-ωπξφΔ]+(?:\([^()\n]*\))?(?:\^[A-Za-z0-9+\-]+)?[²³⁴⁵⁶⁷⁸⁹]?|\d+(?:\^[A-Za-z0-9+\-]+|[²³⁴⁵⁶⁷⁸⁹])?)`;
+  let text = String(line || "");
 
-
-/* builtin word package */
-function cloneBuiltinWord(word) {
-  return normalizeWord(JSON.parse(JSON.stringify(word)));
-}
-
-function cloneBuiltinWords() {
-  return BUILTIN_WORDS.map(cloneBuiltinWord);
-}
-
-function createEmptyProgress(source = {}) {
-  const stage = Number.isInteger(source.stage) ? source.stage : -1;
-  const history = Array.isArray(source.history) ? source.history : [];
-  return {
-    status: source.status || "new",
-    stage,
-    nextReviewAt: source.nextReviewAt || "",
-    lastStudiedAt: source.lastStudiedAt || "",
-    history,
+  const renderFraction = (numerator, denominator) => {
+    const top = stripMathWrapper(numerator);
+    const bottom = stripMathWrapper(denominator);
+    return `<span class="math-frac"><span class="math-num">${formatMathLine(top)}</span><span class="math-den">${formatMathLine(bottom)}</span></span>`;
   };
+
+  text = text.replace(/\[([^\]\n]+)\]\s*\/\s*\[([^\]\n]+)\]/g, (_, numerator, denominator) => {
+    return stash(renderFraction(numerator, denominator));
+  });
+
+  text = text.replace(/\(([^()\n]+)\)\s*\/\s*\(([^()\n]+)\)/g, (_, numerator, denominator) => {
+    return stash(renderFraction(numerator, denominator));
+  });
+
+  text = text.replace(/([A-Za-zΑ-Ωα-ωπξφΔ0-9)\]₀-₉²³⁴⁵⁶⁷⁸⁹]+)\^\(([^()\n]+)\)/g, (_, base, exponent) => {
+    return stash(`<span class="math-power"><span class="math-base">${formatMathLine(base)}</span><sup>${formatMathLine(exponent)}</sup></span>`);
+  });
+
+  text = text.replace(new RegExp(`(${term})\\s*/\\s*(${term})`, "g"), (_, numerator, denominator) => {
+    return stash(renderFraction(numerator, denominator));
+  });
+
+  text = text.replace(/([A-Za-zΑ-Ωα-ωπξφΔ0-9)\]₀-₉]+)\^([A-Za-z0-9+\-]+)/g, (_, base, exponent) => {
+    return stash(`<span class="math-power"><span class="math-base">${formatMathLine(base)}</span><sup>${formatMathLine(exponent)}</sup></span>`);
+  });
+
+  text = text.replace(/∛\(([^()\n]+)\)/g, (_, content) => {
+    return stash(`<span class="math-root cube-root"><span class="radical">³√</span><span class="radicand">${formatMathLine(content)}</span></span>`);
+  });
+
+  text = text.replace(/√\(([^()\n]+)\)/g, (_, content) => {
+    return stash(`<span class="math-root"><span class="radical">√</span><span class="radicand">${formatMathLine(content)}</span></span>`);
+  });
+
+  text = text.replace(/√([A-Za-zΑ-Ωα-ω](?:[a-zα-ω0-9₀-₉²³⁴⁵⁶⁷⁸⁹])*)/g, (_, content) => {
+    return stash(`<span class="math-root"><span class="radical">√</span><span class="radicand">${formatMathLine(content)}</span></span>`);
+  });
+
+  text = text.replace(/lim\(([^)]*)\)/g, (_, subscript) => {
+    return stash(`<span class="math-limit"><span>lim</span><sub>${formatMathLine(subscript)}</sub></span>`);
+  });
+  text = text.replace(/(arctan|arcsin|sin|cos|tan|ln|lg)(?=[A-Za-zΑ-Ωα-ω0-9(]|$)/g, (match) => stash(`<span class="math-token">${match}</span>`));
+
+  return escapeHTML(text).replace(/@@MATH(\d+)@@/g, (_, index) => rendered[Number(index)] || "");
 }
 
-function normalizeModeProgress(word) {
-  const existing = word.progress && typeof word.progress === "object" ? word.progress : {};
-  const legacyProgress = createEmptyProgress(word);
-  return PROGRESS_MODES.reduce((progressByMode, mode) => {
-    const source = existing[mode] || (mode === "card" ? legacyProgress : {});
-    progressByMode[mode] = createEmptyProgress(source);
-    return progressByMode;
-  }, {});
-}
-
-function modeProgress(word, mode = state.practiceMode) {
-  if (!word.progress || typeof word.progress !== "object") {
-    word.progress = normalizeModeProgress(word);
+function stripMathWrapper(value) {
+  const text = String(value || "").trim();
+  if ((text.startsWith("[") && text.endsWith("]")) || (text.startsWith("(") && text.endsWith(")"))) {
+    return text.slice(1, -1).trim();
   }
-  if (!PROGRESS_MODES.includes(mode)) {
-    mode = "card";
-  }
-  if (!word.progress[mode]) {
-    word.progress[mode] = createEmptyProgress();
-  }
-  return word.progress[mode];
+  return text;
 }
 
-function activeModeProgress(word) {
-  return modeProgress(word, state.practiceMode);
-}
-
-function recordModeHistory(word, entry, mode = state.practiceMode) {
-  const progress = modeProgress(word, mode);
-  const historyEntry = { ...entry, mode };
-  progress.history.push(historyEntry);
-  if (!Array.isArray(word.history)) {
-    word.history = [];
+function infoBlock(label, value, tone = "") {
+  if (!normalizeText(value)) {
+    return "";
   }
-  word.history.push(historyEntry);
+  return `
+    <div class="info-block ${tone}">
+      <span>${label}</span>
+      ${label === "题目" ? formatQuestionText(value) : `<p>${formatMathText(value)}</p>`}
+    </div>`;
 }
 
-function applyBuiltinWords(words) {
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
+function normalizeSubject(value) {
+  const subject = normalizeText(value);
+  if (SUBJECTS.includes(subject)) {
+    return subject;
+  }
+  return SUBJECT_ALIASES.get(subject) || "高数";
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.map(normalizeText).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-CN"));
+}
+
+function parseTags(value) {
+  return uniqueValues(String(value || "").split(/[,，、\s]+/));
+}
+
+
+/* builtin package helpers */
+function cloneBuiltinRecord(record) {
+  return normalizeRecord(JSON.parse(JSON.stringify(record)));
+}
+
+function cloneBuiltinRecords() {
+  return BUILTIN_RECORDS.map(cloneBuiltinRecord);
+}
+
+function addMissingTags(record, tags) {
+  record.tags = uniqueValues([...(record.tags || []), ...tags]);
+}
+
+function shouldRefreshBuiltinQuestion(existing, builtin) {
+  if (existing.id !== "M-001-01") {
+    return false;
+  }
+  const current = normalizeText(existing.question);
+  return current.includes("下列各对函数") && current !== builtin.question;
+}
+
+function applyBuiltinPackage(records) {
   let packageAlreadyApplied = false;
   try {
     packageAlreadyApplied = localStorage.getItem(BUILTIN_PACKAGE_KEY) === "1";
@@ -4302,99 +301,529 @@ function applyBuiltinWords(words) {
     packageAlreadyApplied = false;
   }
 
-  const byTerm = new Map(words.map((word) => [word.term.toLowerCase(), word]));
-  BUILTIN_WORDS.forEach((sourceWord) => {
-    const builtin = cloneBuiltinWord(sourceWord);
-    const existing = byTerm.get(builtin.term.toLowerCase());
+  if (!packageAlreadyApplied) {
+    shouldPersistLoadedRecords = true;
+    return cloneBuiltinRecords();
+  }
+
+  const byId = new Map(records.map((record) => [record.id, record]));
+  BUILTIN_RECORDS.forEach((sourceRecord) => {
+    const builtin = cloneBuiltinRecord(sourceRecord);
+    const existing = byId.get(builtin.id);
     if (existing) {
       const previous = JSON.stringify(existing);
-      existing.meaning = mergeStudyText(existing.meaning, builtin.meaning);
-      existing.phrase = mergeStudyText(existing.phrase, builtin.phrase);
-      existing.note = mergeStudyText(existing.note, builtin.note);
-      existing.forms = {
-        third: normalizeText(existing.forms?.third) || normalizeText(builtin.forms?.third),
-        past: normalizeText(existing.forms?.past) || normalizeText(builtin.forms?.past),
-        participle: normalizeText(existing.forms?.participle) || normalizeText(builtin.forms?.participle),
-      };
-      existing.tag = normalizeText(existing.tag) || builtin.tag;
+      if (!normalizeText(existing.reason)) {
+        existing.reason = builtin.reason;
+      }
+      if (normalizeText(builtin.solution) && existing.solution !== builtin.solution) {
+        existing.solution = builtin.solution;
+      }
+      if (shouldRefreshBuiltinQuestion(existing, builtin)) {
+        existing.question = builtin.question;
+        existing.reason = builtin.reason;
+        existing.solution = builtin.solution;
+      }
+      existing.subject = normalizeSubject(existing.subject);
+      existing.source = normalizeText(existing.source) || "作业";
+      addMissingTags(existing, builtin.tags);
       if (JSON.stringify(existing) !== previous) {
-        shouldPersistBuiltinWords = true;
+        shouldPersistLoadedRecords = true;
       }
       return;
     }
 
-    if (!packageAlreadyApplied) {
-      words.push(builtin);
-      byTerm.set(builtin.term.toLowerCase(), builtin);
-      shouldPersistBuiltinWords = true;
-    }
+    records.push(builtin);
+    byId.set(builtin.id, builtin);
+    shouldPersistLoadedRecords = true;
   });
 
-  if (!packageAlreadyApplied) {
-    shouldPersistBuiltinWords = true;
-  }
-  return words;
+  return records;
 }
 
-function loadWords() {
+function loadRecords() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      shouldPersistBuiltinWords = true;
-      return cloneBuiltinWords();
+      shouldPersistLoadedRecords = true;
+      return cloneBuiltinRecords();
     }
     const parsed = JSON.parse(raw);
-    const words = Array.isArray(parsed) ? parsed.map(normalizeWord) : [];
-    return applyBuiltinWords(words);
+    const records = Array.isArray(parsed) ? parsed.map(normalizeRecord) : [];
+    return applyBuiltinPackage(records);
   } catch {
-    shouldPersistBuiltinWords = true;
-    return cloneBuiltinWords();
+    shouldPersistLoadedRecords = true;
+    return cloneBuiltinRecords();
   }
 }
 
-function persistBuiltinWordsIfNeeded() {
-  if (!shouldPersistBuiltinWords) {
+function persistLoadedRecordsIfNeeded() {
+  if (!shouldPersistLoadedRecords) {
     return;
   }
-  saveWords();
+  const wasSuppressed = suppressCloudSync;
+  suppressCloudSync = true;
+  saveRecords();
+  suppressCloudSync = wasSuppressed;
   try {
     localStorage.setItem(BUILTIN_PACKAGE_KEY, "1");
   } catch {
-    // Storage failures are handled by saveWords when possible.
+    // Storage failures are already reported by saveRecords when possible.
   }
 }
 
-function normalizeWord(word) {
+let deferredInstallPrompt = null;
+
+function setupInstallAppButton() {
+  if (!els.installAppButton) {
+    return;
+  }
+
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isStandalone) {
+    els.installAppButton.hidden = true;
+    return;
+  }
+
+  els.installAppButton.hidden = false;
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    els.installAppButton.hidden = false;
+  });
+
+  els.installAppButton.addEventListener("click", async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      return;
+    }
+
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS) {
+      showToast("iPhone：用 Safari 打开，点分享，再点“添加到主屏幕”");
+      return;
+    }
+    showToast("用 Chrome 打开 GitHub Pages 链接，再选择“安装应用”");
+  });
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator) || location.protocol === "file:") {
+    return;
+  }
+  navigator.serviceWorker.register("./sw.js").catch(() => {
+    // The app still works online if registration fails.
+  });
+}
+
+function getBuiltinRecordById(id) {
+  return BUILTIN_RECORDS.find((record) => record.id === id);
+}
+
+function isPublicView() {
+  return Boolean(PUBLIC_VIEWER_SLUG);
+}
+
+function normalizeCloudSlug(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+}
+
+function getDefaultCloudConfig() {
   return {
-    id: word.id || createId(),
-    term: word.term || "",
-    meaning: word.meaning || "",
-    phrase: word.phrase || "",
-    note: word.note || "",
-    tag: word.tag || "",
-    forms: {
-      third: normalizeText(word.forms?.third || word.forms?.thirdPerson || word.thirdPerson || ""),
-      past: normalizeText(word.forms?.past || word.forms?.pastTense || word.pastTense || ""),
-      participle: normalizeText(word.forms?.participle || word.forms?.pastParticiple || word.pastParticiple || ""),
-    },
-    important: Boolean(word.important),
-    status: word.status || "new",
-    stage: Number.isInteger(word.stage) ? word.stage : -1,
-    nextReviewAt: word.nextReviewAt || "",
-    lastStudiedAt: word.lastStudiedAt || "",
-    createdAt: word.createdAt || new Date().toISOString(),
-    updatedAt: word.updatedAt || new Date().toISOString(),
-    history: Array.isArray(word.history) ? word.history : [],
-    progress: normalizeModeProgress(word),
+    slug: "",
+    displayName: "",
+    pin: "",
+    isPublic: true,
   };
 }
 
-function saveWords() {
+function getCloudConfig() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.words));
+    const saved = JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}");
+    return {
+      ...getDefaultCloudConfig(),
+      ...saved,
+      slug: normalizeCloudSlug(saved.slug),
+      isPublic: saved.isPublic !== false,
+    };
+  } catch {
+    return getDefaultCloudConfig();
+  }
+}
+
+function saveCloudConfig(config) {
+  localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify({
+    slug: normalizeCloudSlug(config.slug),
+    displayName: String(config.displayName || "").trim().slice(0, 32),
+    pin: String(config.pin || ""),
+    isPublic: config.isPublic !== false,
+  }));
+}
+
+function setCloudStatus(message, tone = "neutral") {
+  if (!els.cloudStatus) {
+    return;
+  }
+  els.cloudStatus.textContent = message;
+  els.cloudStatus.dataset.tone = tone;
+}
+
+function setCloudBusy(isBusy) {
+  [
+    els.loadCloudButton,
+    els.copyPublicLinkButton,
+    els.cloudForm ? els.cloudForm.querySelector('[type="submit"]') : null,
+  ].forEach((button) => {
+    if (button) {
+      button.disabled = isBusy;
+    }
+  });
+}
+
+function getCloudTimeLabel() {
+  return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+}
+
+function cloudErrorMessage(error) {
+  const message = String(error && error.message ? error.message : error || "");
+  if (message.includes("Could not find the function") || message.includes("study_cloud")) {
+    return "还没在 Supabase 运行 setup 文件，先到 SQL Editor 执行 supabase-setup.sql。";
+  }
+  if (message.includes("invalid slug")) {
+    return "公开编号只能用英文小写、数字、横线或下划线。";
+  }
+  if (message.includes("wrong pin")) {
+    return "编辑密码不对。";
+  }
+  if (message.includes("Failed to fetch")) {
+    return "网络没有连上，或 Supabase 地址暂时访问不了。";
+  }
+  return message || "云同步失败，请稍后再试。";
+}
+
+async function cloudRequest(path, options = {}) {
+  const response = await fetch(`${SUPABASE_URL}${path}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    let detail = text;
+    try {
+      const parsed = JSON.parse(text);
+      detail = parsed.message || parsed.error_description || parsed.error || text;
+    } catch {
+      // Plain text errors are fine.
+    }
+    throw new Error(detail || `请求失败 ${response.status}`);
+  }
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+function getPublicLink(slug) {
+  const publicSlug = normalizeCloudSlug(slug);
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("public", publicSlug);
+  return url.href;
+}
+
+async function copyText(value) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  textarea.remove();
+}
+
+function openCloudDialog() {
+  if (!els.cloudDialog) {
+    return;
+  }
+  const config = getCloudConfig();
+  els.cloudSlugInput.value = config.slug;
+  els.cloudNameInput.value = config.displayName;
+  els.cloudPinInput.value = config.pin;
+  els.cloudPublicInput.checked = config.isPublic;
+  setCloudStatus(
+    config.slug
+      ? `当前编号：${config.slug}。保存后别人可用公开链接看你的进度。`
+      : "第一次使用前，请先在 Supabase 运行 setup 文件，再填写公开编号和编辑密码。",
+  );
+  if (els.cloudDialog.showModal) {
+    els.cloudDialog.showModal();
+  } else {
+    els.cloudDialog.setAttribute("open", "");
+  }
+}
+
+function closeCloudDialog() {
+  if (!els.cloudDialog) {
+    return;
+  }
+  if (els.cloudDialog.close) {
+    els.cloudDialog.close();
+  } else {
+    els.cloudDialog.removeAttribute("open");
+  }
+}
+
+async function saveCloudNow({ showStatus = false } = {}) {
+  if (isPublicView()) {
+    return false;
+  }
+  const config = getCloudConfig();
+  if (!config.slug || !config.pin) {
+    return false;
+  }
+  setCloudBusy(true);
+  setCloudStatus("正在同步到云端...", "loading");
+  try {
+    const records = state.records.map((record) => normalizeRecord(record));
+    await cloudRequest("/rest/v1/rpc/save_study_cloud", {
+      method: "POST",
+      body: JSON.stringify({
+        p_slug: config.slug,
+        p_pin: config.pin,
+        p_records: records,
+        p_display_name: config.displayName || config.slug,
+        p_is_public: config.isPublic,
+      }),
+    });
+    setCloudStatus(`已同步 ${records.length} 题 · ${getCloudTimeLabel()}`, "ok");
+    if (showStatus) {
+      showToast("已保存到云端");
+    }
+    return true;
+  } catch (error) {
+    const message = cloudErrorMessage(error);
+    setCloudStatus(message, "error");
+    if (showStatus) {
+      showToast(message);
+    }
+    return false;
+  } finally {
+    setCloudBusy(false);
+  }
+}
+
+function scheduleCloudSync() {
+  if (isPublicView() || suppressCloudSync) {
+    return;
+  }
+  const config = getCloudConfig();
+  if (!config.slug || !config.pin) {
+    return;
+  }
+  window.clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = window.setTimeout(() => {
+    saveCloudNow();
+  }, 1200);
+}
+
+async function loadCloudRecords(slug) {
+  const publicSlug = normalizeCloudSlug(slug);
+  const rows = await cloudRequest(`/rest/v1/study_cloud_records?select=record&slug=eq.${encodeURIComponent(publicSlug)}&order=record_id.asc`);
+  return Array.isArray(rows) ? rows.map((row) => normalizeRecord(row.record || row)) : [];
+}
+
+async function loadCloudProfile(slug) {
+  const publicSlug = normalizeCloudSlug(slug);
+  const rows = await cloudRequest(`/rest/v1/study_cloud_profiles?select=slug,display_name,updated_at,is_public&slug=eq.${encodeURIComponent(publicSlug)}&is_public=eq.true&limit=1`);
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
+async function loadCloudToLocal({ silent = false } = {}) {
+  if (isPublicView()) {
+    return false;
+  }
+  const config = getCloudConfig();
+  if (!config.slug || !config.pin) {
+    return false;
+  }
+  if (!silent) {
+    setCloudStatus("正在从云端加载...", "loading");
+  }
+  try {
+    const records = await loadCloudRecords(config.slug);
+    if (!records.length) {
+      if (!silent) {
+        setCloudStatus("云端还没有记录，先点“保存并开启同步”。", "neutral");
+      }
+      return false;
+    }
+    state.records = records;
+    suppressCloudSync = true;
+    saveRecords();
+    suppressCloudSync = false;
+    render();
+    setCloudStatus(`已从云端加载 ${records.length} 题 · ${getCloudTimeLabel()}`, "ok");
+    if (!silent) {
+      showToast("已从云端加载");
+    }
+    return true;
+  } catch (error) {
+    const message = cloudErrorMessage(error);
+    if (!silent) {
+      setCloudStatus(message, "error");
+      showToast(message);
+    }
+    return false;
+  } finally {
+    suppressCloudSync = false;
+  }
+}
+
+async function loadPublicView() {
+  if (!isPublicView()) {
+    return;
+  }
+  document.body.classList.add("public-view");
+  showToast("正在读取公开进度...");
+  try {
+    const profile = await loadCloudProfile(PUBLIC_VIEWER_SLUG);
+    if (!profile) {
+      throw new Error("没有找到这个公开编号，或主人没有开启公开查看。");
+    }
+    const records = await loadCloudRecords(PUBLIC_VIEWER_SLUG);
+    if (records.length) {
+      state.records = records;
+      render();
+    }
+    document.title = `${profile.display_name || "公开错题进度"} - 专升本错题本`;
+    const heading = document.querySelector(".brand-copy h1");
+    if (heading) {
+      heading.textContent = profile.display_name || "公开错题进度";
+    }
+    showToast(`已读取 ${records.length} 题`);
+  } catch (error) {
+    showToast(cloudErrorMessage(error));
+  }
+}
+
+async function copyPublicLink() {
+  const slug = normalizeCloudSlug(els.cloudSlugInput ? els.cloudSlugInput.value : getCloudConfig().slug);
+  if (!slug) {
+    setCloudStatus("先填写公开编号，再复制链接。", "error");
+    return;
+  }
+  const link = getPublicLink(slug);
+  try {
+    await copyText(link);
+    setCloudStatus(`公开链接已复制：${link}`, "ok");
+    showToast("公开链接已复制");
+  } catch {
+    setCloudStatus(`复制失败，可以手动复制：${link}`, "error");
+  }
+}
+
+async function handleCloudSubmit(event) {
+  event.preventDefault();
+  const slug = normalizeCloudSlug(els.cloudSlugInput.value);
+  const pin = els.cloudPinInput.value.trim();
+  if (!slug) {
+    setCloudStatus("公开编号不能为空，只建议用英文和数字。", "error");
+    return;
+  }
+  if (pin.length < 4) {
+    setCloudStatus("编辑密码至少 4 位。", "error");
+    return;
+  }
+  els.cloudSlugInput.value = slug;
+  saveCloudConfig({
+    slug,
+    pin,
+    displayName: els.cloudNameInput.value,
+    isPublic: els.cloudPublicInput.checked,
+  });
+  await saveCloudNow({ showStatus: true });
+}
+
+function setupCloudUi() {
+  if (isPublicView()) {
+    document.body.classList.add("public-view");
+    [
+      els.newRecordButton,
+      els.importButton,
+      els.exportButton,
+      els.cloudSyncButton,
+    ].forEach((element) => {
+      if (element) {
+        element.hidden = true;
+      }
+    });
+    return;
+  }
+  const config = getCloudConfig();
+  if (config.slug) {
+    setCloudStatus(`已保存云同步编号：${config.slug}`);
+  }
+}
+
+function normalizeRecord(record) {
+  const builtinRecord = getBuiltinRecordById(record.id);
+  return {
+    id: record.id || createId(),
+    title: record.title || "未命名错题",
+    subject: normalizeSubject(record.subject),
+    chapter: record.chapter || "",
+    source: record.source || "作业",
+    wrongAt: record.wrongAt || todayISO(),
+    nextReview: record.nextReview || "",
+    status: record.status || "new",
+    difficulty: String(record.difficulty || "2"),
+    question: record.question || "",
+    wrongAnswer: record.wrongAnswer || "",
+    correctAnswer: record.correctAnswer || "",
+    reason: record.reason || "",
+    analysis: record.analysis || "",
+    solution: record.solution || (builtinRecord ? builtinRecord.solution : ""),
+    tags: Array.isArray(record.tags) ? uniqueValues(record.tags) : parseTags(record.tags),
+    images: Array.isArray(record.images) ? record.images : [],
+    reviews: Array.isArray(record.reviews) ? record.reviews : [],
+    createdAt: record.createdAt || new Date().toISOString(),
+    updatedAt: record.updatedAt || new Date().toISOString(),
+  };
+}
+
+function saveRecords() {
+  if (isPublicView()) {
+    return false;
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.records));
+    scheduleCloudSync();
     return true;
   } catch {
-    showToast("保存失败，可能是浏览器空间不足");
+    showToast("保存失败，图片可能过大；请删掉部分图片后再保存");
     return false;
   }
 }
@@ -4406,1001 +835,415 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), 2200);
 }
 
-function formatDateTime(value) {
-  if (!value) {
-    return "未安排";
-  }
-  const date = new Date(value);
-  const sameDay = todayKey(date) === todayKey();
-  const day = sameDay ? "今天" : `${date.getMonth() + 1}/${date.getDate()}`;
-  return `${day} ${date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
-}
-
-function formatTime(value) {
-  return new Date(value).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-}
-
-function isDue(word, date = nowDate(), mode = state.practiceMode) {
-  const progress = modeProgress(word, mode);
-  return Boolean(progress.nextReviewAt && new Date(progress.nextReviewAt) <= date);
-}
-
-function isTodayReview(word, mode = state.practiceMode) {
-  const progress = modeProgress(word, mode);
-  return Boolean(progress.nextReviewAt && todayKey(new Date(progress.nextReviewAt)) === todayKey());
-}
-
-function learnedToday(word, mode = state.practiceMode) {
-  const progress = modeProgress(word, mode);
-  return progress.history.some((entry) => todayKey(new Date(entry.time)) === todayKey());
-}
-
-function wordGroupName(word) {
-  const tag = normalizeText(word.tag);
-  if (!tag) {
-    return "未分组";
-  }
-  return tag.split("/")[0].trim() || tag;
-}
-
-function wordMatchesActiveGroup(word) {
-  return state.activeGroup === "all" || wordGroupName(word) === state.activeGroup;
-}
-
-function practiceEligibleWords(words) {
-  return state.practiceMode === "forms" ? words.filter(hasVerbForms) : words;
-}
-
-function resetTypingState() {
-  state.spellingDraft = "";
-  state.spellingResult = null;
-  state.formDrafts = emptyVerbForms();
-  state.formResult = null;
-}
-
-function statusOf(word, mode = state.practiceMode) {
-  const progress = modeProgress(word, mode);
-  if (isDue(word, nowDate(), mode)) {
-    return "due";
-  }
-  if (progress.status === "new" || (progress.stage < 0 && !progress.nextReviewAt)) {
-    return "new";
-  }
-  if (progress.stage >= REVIEW_STEPS.length - 1) {
-    return "mature";
-  }
-  return "learning";
+function isDue(record) {
+  return Boolean(record.nextReview && record.nextReview <= todayISO() && record.status !== "mastered");
 }
 
 function statusLabel(status) {
   return {
-    due: "到期",
-    new: "新词",
-    learning: "学习中",
-    mature: "稳定",
-    important: "重点",
-  }[status] || "新词";
+    new: "新记录",
+    reviewing: "复习中",
+    mastered: "已掌握",
+  }[status] || "新记录";
 }
 
-function scheduleNext(word, result, options = {}) {
-  const progress = modeProgress(word);
-  const completedAt = options.completedAt || nowDate();
-  let nextStep = 0;
-  let delay = REVIEW_STEPS[0].ms;
-  let label = REVIEW_STEPS[0].label;
+function difficultyLabel(difficulty) {
+  return {
+    1: "简单",
+    2: "中等",
+    3: "困难",
+  }[difficulty] || "中等";
+}
 
-  if (result === "new" || result === "remember") {
-    nextStep = Math.min(progress.stage + 1, REVIEW_STEPS.length - 1);
-    if (progress.stage < 0) {
-      nextStep = 0;
-    }
-    delay = REVIEW_STEPS[nextStep].ms;
-    label = REVIEW_STEPS[nextStep].label;
-  }
+function filteredRecords() {
+  const query = state.filters.query.toLowerCase();
+  let records = state.records.filter((record) => {
+    const haystack = [
+      record.title,
+      record.subject,
+      record.chapter,
+      record.source,
+      record.question,
+      record.reason,
+      record.analysis,
+      record.tags.join(" "),
+    ].join(" ").toLowerCase();
 
-  if (result === "fuzzy") {
-    nextStep = Math.max(0, progress.stage);
-    delay = REVIEW_STEPS[0].ms;
-    label = REVIEW_STEPS[0].label;
-  }
-
-  if (result === "forgot") {
-    nextStep = -1;
-    delay = 5 * 60 * 1000;
-    label = "5分钟";
-    word.important = true;
-  }
-
-  const nextDate = new Date(completedAt.getTime() + delay);
-  progress.stage = nextStep;
-  progress.status = nextStep >= REVIEW_STEPS.length - 1 ? "mature" : "learning";
-  progress.nextReviewAt = nextDate.toISOString();
-  progress.lastStudiedAt = completedAt.toISOString();
-  word.updatedAt = completedAt.toISOString();
-  recordModeHistory(word, {
-    time: completedAt.toISOString(),
-    result,
-    nextReviewAt: progress.nextReviewAt,
+    const matchesQuery = !query || haystack.includes(query);
+    const matchesSubject = state.filters.subject === "all" || record.subject === state.filters.subject;
+    const matchesStatus = state.filters.status === "all" || record.status === state.filters.status;
+    const matchesTag = state.filters.tag === "all" || record.tags.includes(state.filters.tag);
+    const matchesDue = !state.filters.dueOnly || isDue(record);
+    return matchesQuery && matchesSubject && matchesStatus && matchesTag && matchesDue;
   });
-  if (!options.silent) {
-    showToast(`下次：${formatDateTime(progress.nextReviewAt)}（${label}后）`);
-  }
-}
 
-function getQueue() {
-  const scopedWords = practiceEligibleWords(state.words.filter(wordMatchesActiveGroup));
-  if (state.sprint.active) {
-    return sprintQueue(scopedWords);
-  }
-  const sorted = getOrderedStudyWords(scopedWords);
-
-  if (state.mode === "new") {
-    return sorted.filter((word) => statusOf(word) === "new");
-  }
-  if (state.mode === "all") {
-    return sorted;
-  }
-  return sorted.filter((word) => isDue(word));
-}
-
-function sprintQueue(words = state.words.filter(wordMatchesActiveGroup)) {
-  const rank = (word) => {
-    if (isDue(word)) {
-      return 0;
-    }
-    if (word.important) {
-      return 1;
-    }
-    if (statusOf(word) === "new") {
-      return 2;
-    }
-    return 3;
+  const byDate = (field, direction = 1) => (a, b) => {
+    const av = a[field] || "";
+    const bv = b[field] || "";
+    return av.localeCompare(bv) * direction;
   };
-  return [...words].sort((a, b) => {
-    const rankDiff = rank(a) - rank(b);
-    if (rankDiff) {
-      return rankDiff;
-    }
-    const aTime = activeModeProgress(a).nextReviewAt || "9999-12-31";
-    const bTime = activeModeProgress(b).nextReviewAt || "9999-12-31";
-    return aTime.localeCompare(bTime) || a.term.localeCompare(b.term, "en", { sensitivity: "base" });
-  });
-}
 
-function stableRandomRank(word) {
-  const seed = `${todayKey()}-${word.id || word.term}`;
-  let hash = 0;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
-  }
-  return hash;
-}
-
-function getOrderedStudyWords(words, order = state.dictationOrder) {
-  const sortedByDue = [...words].sort((a, b) => {
-    const ad = activeModeProgress(a).nextReviewAt || "9999-12-31";
-    const bd = activeModeProgress(b).nextReviewAt || "9999-12-31";
-    return ad.localeCompare(bd);
-  });
-
-  if (state.practiceMode !== "dictation") {
-    return sortedByDue;
+  if (state.filters.sort === "oldest") {
+    records = records.sort(byDate("wrongAt", 1));
+  } else if (state.filters.sort === "due") {
+    records = records.sort((a, b) => (a.nextReview || "9999-12-31").localeCompare(b.nextReview || "9999-12-31"));
+  } else if (state.filters.sort === "difficulty") {
+    records = records.sort((a, b) => Number(b.difficulty) - Number(a.difficulty));
+  } else {
+    records = records.sort(byDate("createdAt", -1));
   }
 
-  switch (order) {
-    case "important":
-      return sortedByDue.sort((a, b) => Number(b.important) - Number(a.important));
-    case "random":
-      return sortedByDue.sort((a, b) => stableRandomRank(a) - stableRandomRank(b));
-    case "az":
-      return sortedByDue.sort((a, b) => a.term.localeCompare(b.term, "en", { sensitivity: "base" }));
-    case "due":
-    default:
-      return sortedByDue.sort((a, b) => {
-        const dueDiff = Number(isDue(b)) - Number(isDue(a));
-        if (dueDiff) {
-          return dueDiff;
-        }
-        const aTime = activeModeProgress(a).nextReviewAt || "9999-12-31";
-        const bTime = activeModeProgress(b).nextReviewAt || "9999-12-31";
-        return aTime.localeCompare(bTime);
-      });
-  }
-}
-
-function chooseActiveWord(forceFirst = false) {
-  const queue = getQueue();
-  if (!queue.length) {
-    state.activeId = null;
-    state.answerVisible = false;
-    return;
-  }
-  const activeStillValid = queue.some((word) => word.id === state.activeId);
-  if (forceFirst || !activeStillValid) {
-    state.activeId = queue[0].id;
-    state.answerVisible = false;
-    resetTypingState();
-    state.lastAutoSpokenId = null;
-  }
-}
-
-function activeWord() {
-  return state.words.find((word) => word.id === state.activeId) || null;
+  return records;
 }
 
 function render() {
-  chooseActiveWord();
   renderStats();
-  renderDashboard();
-  renderDailyReport();
-  renderClock();
-  renderSprintStatus();
-  renderModeButtons();
-  renderPracticeButtons();
-  renderDictationTools();
-  renderActiveCard();
-  renderTimeline();
-  renderGroupProgress();
-  renderWordList();
+  renderFilters();
+  renderSubjectStrip();
+  renderRecords();
+  renderReviewQueue();
 }
 
 function renderStats() {
-  els.totalCount.textContent = state.words.length;
-  els.dueCount.textContent = state.words.filter((word) => isDue(word)).length;
-  els.todayCount.textContent = state.words.filter(isTodayReview).length;
-  els.doneTodayCount.textContent = state.words.filter(learnedToday).length;
+  const now = new Date();
+  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  els.totalCount.textContent = state.records.length;
+  els.dueCount.textContent = state.records.filter(isDue).length;
+  els.monthCount.textContent = state.records.filter((record) => record.wrongAt.startsWith(monthPrefix)).length;
+  els.masteredCount.textContent = state.records.filter((record) => record.status === "mastered").length;
 }
 
-function renderClock() {
-  els.clockNow.textContent = nowDate().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+function renderFilters() {
+  const tags = uniqueValues(state.records.flatMap((record) => record.tags));
+  replaceOptions(els.subjectFilter, [["all", "全部科目"], ...SUBJECTS.map((subject) => [subject, subject])], state.filters.subject);
+  replaceOptions(els.tagFilter, [["all", "全部标签"], ...tags.map((tag) => [tag, tag])], state.filters.tag);
 }
 
-function formatDuration(ms) {
-  const safeMs = Math.max(0, ms);
-  const minutes = Math.floor(safeMs / 60000);
-  const seconds = Math.floor((safeMs % 60000) / 1000);
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
-function endSprint() {
-  if (!state.sprint.active) {
-    return;
-  }
-  state.sprint.active = false;
-  state.sprint.endsAt = "";
-  state.sprint.startedAt = "";
-  showToast(`15分钟冲刺结束，完成 ${state.sprint.completed} 个`);
-}
-
-function renderSprintStatus() {
-  if (!els.sprintStatus) {
-    return;
-  }
-  if (!state.sprint.active) {
-    els.sprintStatus.textContent = "15分钟未开始";
-    els.sprintStatus.classList.remove("active");
-    return;
-  }
-  const remaining = new Date(state.sprint.endsAt) - nowDate();
-  if (remaining <= 0) {
-    endSprint();
-    els.sprintStatus.textContent = `本轮完成 ${state.sprint.completed} 个`;
-    els.sprintStatus.classList.remove("active");
-    return;
-  }
-  els.sprintStatus.classList.add("active");
-  els.sprintStatus.textContent = `冲刺 ${formatDuration(remaining)} · ${state.sprint.completed} 个`;
-}
-
-function todayHistoryEntries(mode = state.practiceMode) {
-  const today = todayKey();
-  return state.words.flatMap((word) => modeProgress(word, mode).history
-    .filter((entry) => todayKey(new Date(entry.time)) === today)
-    .map((entry) => ({ ...entry, word })));
-}
-
-function dailyReportStats() {
-  const entries = todayHistoryEntries();
-  const studiedWords = new Set(entries.map((entry) => entry.word.id));
-  const reviewEntries = entries.filter((entry) => ["new", "remember", "fuzzy", "forgot"].includes(entry.result));
-  const spellingEntries = entries.filter((entry) => ["spell-correct", "spell-wrong", "forms-correct", "forms-wrong"].includes(entry.result));
-  const spellingCorrect = spellingEntries.filter((entry) => ["spell-correct", "forms-correct"].includes(entry.result)).length;
-  const forgotten = entries.filter((entry) => ["forgot", "spell-wrong", "forms-wrong"].includes(entry.result)).length;
-  const importantNow = state.words.filter((word) => word.important).length;
-  const nextReview = state.words
-    .map((word) => modeProgress(word))
-    .filter((progress) => progress.nextReviewAt)
-    .sort((a, b) => a.nextReviewAt.localeCompare(b.nextReviewAt))[0]?.nextReviewAt || "";
-  return {
-    studied: studiedWords.size,
-    reviews: reviewEntries.length,
-    spellingTotal: spellingEntries.length,
-    spellingCorrect,
-    spellingRate: spellingEntries.length ? Math.round((spellingCorrect / spellingEntries.length) * 100) : 0,
-    forgotten,
-    importantNow,
-    nextReview,
-  };
-}
-
-function renderDailyReport() {
-  if (!els.dailyReport) {
-    return;
-  }
-  const report = dailyReportStats();
-  els.dailyReport.innerHTML = `
-    <div class="panel-heading">
-      <div>
-        <p class="eyebrow">Report</p>
-        <h2>今日战报</h2>
-      </div>
-      <span class="status-pill">${todayKey()}</span>
-    </div>
-    <div class="report-grid">
-      <article><span>今日学习</span><strong>${report.studied}</strong><p>个词有记录</p></article>
-      <article><span>复习动作</span><strong>${report.reviews}</strong><p>记完/会了/模糊/忘了</p></article>
-      <article><span>拼写正确率</span><strong>${report.spellingTotal ? `${report.spellingRate}%` : "--"}</strong><p>${report.spellingCorrect}/${report.spellingTotal}</p></article>
-      <article><span>忘记/拼错</span><strong>${report.forgotten}</strong><p>自动进入重点复盘</p></article>
-      <article><span>重点词</span><strong>${report.importantNow}</strong><p>当前重点词本</p></article>
-      <article><span>下次提醒</span><strong>${report.nextReview ? formatDateTime(report.nextReview) : "--"}</strong><p>按间隔复习生成</p></article>
-    </div>`;
-}
-
-function renderModeButtons() {
-  [
-    [els.dueModeButton, "due"],
-    [els.newModeButton, "new"],
-    [els.allModeButton, "all"],
-  ].forEach(([button, mode]) => button.classList.toggle("active", state.mode === mode));
-}
-
-function renderPracticeButtons() {
-  document.querySelectorAll("[data-practice-mode]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.practiceMode === state.practiceMode);
-  });
-}
-
-function renderDictationTools() {
-  if (!els.dictationOrderSelect) {
-    return;
-  }
-  if (els.dictationOrderSelect.value !== state.dictationOrder) {
-    els.dictationOrderSelect.value = state.dictationOrder;
-  }
-  const visible = state.practiceMode === "dictation";
-  els.dictationOrderSelect.closest(".dictation-tools")?.classList.toggle("is-visible", visible);
-}
-
-function renderDashboard() {
-  const newCount = state.words.filter((word) => statusOf(word) === "new").length;
-  const dueNow = state.words.filter((word) => isDue(word)).length;
-  const todayReview = state.words.filter(isTodayReview).length;
-  const important = state.words.filter((word) => word.important).length;
-  const importantDue = state.words.filter((word) => word.important && (isDue(word) || statusOf(word) === "new")).length;
-  const newTarget = Math.min(30, newCount);
-  const reviewTarget = Math.max(dueNow, todayReview);
-  const estimate = Math.max(0, Math.ceil(newTarget * 0.8 + reviewTarget * 0.45 + importantDue * 0.35));
-  const examDate = new Date(`${state.settings.examDate}T00:00:00`);
-  const today = new Date(`${todayKey()}T00:00:00`);
-  const dayDiff = Math.ceil((examDate - today) / (24 * 60 * 60 * 1000));
-
-  els.examDays.textContent = Number.isFinite(dayDiff) ? Math.max(0, dayDiff) : "--";
-  if (els.examDateInput.value !== state.settings.examDate) {
-    els.examDateInput.value = state.settings.examDate;
-  }
-  els.todayNewTarget.textContent = newTarget;
-  els.todayReviewTarget.textContent = reviewTarget;
-  els.importantCount.textContent = important;
-  els.estimateMinutes.textContent = estimate;
-  els.todayNewHint.textContent = newCount ? `还剩 ${newCount} 个新词，建议今天先拿下 ${newTarget} 个` : "新词清空了，今天专心复习";
-  els.todayReviewHint.textContent = reviewTarget ? `现在到期 ${dueNow} 个，今日已排 ${todayReview} 个` : "暂无到期复习，等系统提醒";
-}
-
-function renderGroupProgress() {
-  const groups = new Map();
-  state.words.forEach((word) => {
-    const name = wordGroupName(word);
-    if (!groups.has(name)) {
-      groups.set(name, []);
+function replaceOptions(select, options, current) {
+  const validValues = new Set(options.map(([value]) => value));
+  if (!validValues.has(current)) {
+    if (select === els.subjectFilter) {
+      state.filters.subject = "all";
     }
-    groups.get(name).push(word);
-  });
-
-  if (!groups.size) {
-    els.groupProgress.innerHTML = `<div class="group-card"><strong>暂无分组</strong><p>导入 Word List 后会显示进度</p></div>`;
-    return;
+    if (select === els.tagFilter) {
+      state.filters.tag = "all";
+    }
   }
-
-  const modeName = PROGRESS_MODE_LABELS[state.practiceMode] || "当前模式";
-  const allCard = `
-      <article class="group-card${state.activeGroup === "all" ? " active" : ""}" data-group-action="study" data-group="all">
-        <strong>全部 Word List</strong>
-        <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
-        <p>${modeName}独立进度 · 总计 ${state.words.length} 个</p>
-      </article>`;
-
-  els.groupProgress.innerHTML = allCard + [...groups.entries()].map(([name, words]) => {
-    const learned = words.filter((word) => modeProgress(word).stage >= 0).length;
-    const mature = words.filter((word) => statusOf(word) === "mature").length;
-    const due = words.filter((word) => isDue(word)).length;
-    const important = words.filter((word) => word.important).length;
-    const percent = Math.round((learned / words.length) * 100);
-    return `
-      <article class="group-card${state.activeGroup === name ? " active" : ""}" data-group-action="study" data-group="${escapeHTML(name)}">
-        <strong>${escapeHTML(name)}</strong>
-        <div class="progress-bar"><div class="progress-fill" style="width:${percent}%"></div></div>
-        <p>${learned}/${words.length} 已学 · 到期 ${due} · 重点 ${important} · 稳定 ${mature}</p>
-        <button class="text-button" type="button">只背本组</button>
-      </article>`;
-  }).join("");
+  select.innerHTML = options
+    .map(([value, label]) => `<option value="${escapeHTML(value)}">${escapeHTML(label)}</option>`)
+    .join("");
+  select.value = validValues.has(current) ? current : "all";
 }
 
-function practiceView(word) {
-  const safeMeaning = word.meaning || "未填中文";
-  const safeTerm = word.term || "未命名";
-  const phrase = word.phrase || "";
-
-  if (state.practiceMode === "forms") {
-    return {
-      prompt: "动词变形拼写",
-      target: safeTerm,
-      hidden: "三单 / 过去式 / 过去分词已盖住",
-      answer: verbFormsAnswerText(word),
-      extra: safeMeaning,
-    };
-  }
-
-  if (state.practiceMode === "spell") {
-    const pattern = new RegExp(escapeRegExp(safeTerm), "ig");
-    const hintPhrase = phrase && pattern.test(phrase) ? phrase.replace(pattern, "____") : phrase;
-    return {
-      prompt: "看提示，拼出英文",
-      target: safeMeaning,
-      hidden: "输入英文后检查",
-      answer: safeTerm,
-      extra: hintPhrase ? `搭配提示：${hintPhrase}` : "",
-    };
-  }
-
-  if (state.practiceMode === "dictation") {
-    return {
-      prompt: "听读音，拼写英文",
-      target: "先听读音，再把单词或短语拼出来",
-      hidden: "答案已盖住",
-      answer: safeTerm,
-      extra: state.answerVisible ? safeMeaning : "",
-    };
-  }
-
-  if (state.practiceMode === "zhToEn") {
-    return {
-      prompt: "看中文，拼出英文",
-      target: safeMeaning,
-      hidden: "英文已盖住",
-      answer: safeTerm,
-      extra: phrase ? `搭配：${phrase}` : "",
-    };
-  }
-
-  if (state.practiceMode === "phrase") {
-    const pattern = new RegExp(escapeRegExp(safeTerm), "i");
-    const blanked = phrase && pattern.test(phrase) ? phrase.replace(pattern, "____") : (phrase || safeMeaning);
-    return {
-      prompt: "搭配填空",
-      target: blanked,
-      hidden: "答案已盖住",
-      answer: safeTerm,
-      extra: safeMeaning,
-    };
-  }
-
-  if (state.practiceMode === "enToZh") {
-    return {
-      prompt: "看英文，说中文",
-      target: safeTerm,
-      hidden: "中文已盖住",
-      answer: safeMeaning,
-      extra: phrase ? `搭配：${phrase}` : "",
-    };
-  }
-
-  return {
-    prompt: "卡片记忆",
-    target: safeTerm,
-    hidden: "释义已盖住",
-    answer: safeMeaning,
-    extra: phrase ? `搭配：${phrase}` : "",
-  };
+function renderSubjectStrip() {
+  const counts = new Map();
+  state.records.forEach((record) => counts.set(record.subject, (counts.get(record.subject) || 0) + 1));
+  const allClass = state.filters.subject === "all" ? " active" : "";
+  els.subjectStrip.innerHTML = `<button class="chip${allClass}" data-subject="all">全部 ${state.records.length}</button>` +
+    SUBJECTS.map((subject) => {
+      const count = counts.get(subject) || 0;
+      const active = state.filters.subject === subject ? " active" : "";
+      return `<button class="chip${active}" data-subject="${escapeHTML(subject)}">${escapeHTML(subject)} ${count}</button>`;
+    }).join("");
 }
 
-function renderVerbFormsBox(word) {
-  if (state.practiceMode !== "forms") {
-    return "";
-  }
-  const forms = verbForms(word);
-  const drafts = state.formDrafts;
-  const result = state.formResult;
-  const answer = result ? `
-    <div class="forms-summary ${result.correct ? "is-correct" : "is-wrong"}">
-      ${result.correct ? "三个变形都拼对了" : `正确答案：${escapeHTML(verbFormsAnswerText(word))}`}
-    </div>` : "";
-  return `
-    <div class="spell-box verb-forms-box">
-      <div class="form-result-grid">
-        <label>
-          <span>三单</span>
-          <input data-form-input="third" type="text" value="${escapeHTML(drafts.third)}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${escapeHTML(forms.third || "三单")}">
-        </label>
-        <label>
-          <span>过去式</span>
-          <input data-form-input="past" type="text" value="${escapeHTML(drafts.past)}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${escapeHTML(forms.past || "过去式")}">
-        </label>
-        <label>
-          <span>过去分词</span>
-          <input data-form-input="participle" type="text" value="${escapeHTML(drafts.participle)}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${escapeHTML(forms.participle || "过去分词")}">
-        </label>
-      </div>
-      <div class="spell-actions">
-        <button class="primary-button" data-card-action="check-forms" type="button">检查变形</button>
-        <button class="secondary-button" data-card-action="clear-spelling" type="button">重写</button>
-        <button class="secondary-button audio-button" data-card-action="speak" type="button">播放原词</button>
-      </div>
-      <p>三个都填对才算通过；不规则词可以在添加单词时手动填准。</p>
-      ${answer}
-    </div>`;
-}
-
-function renderSpellingBox(word) {
-  if (!["spell", "dictation"].includes(state.practiceMode)) {
-    return "";
-  }
-  const result = state.spellingResult;
-  const value = escapeHTML(state.spellingDraft);
-  const feedback = result ? `
-    <div class="spell-feedback ${result.correct ? "is-correct" : "is-wrong"}">
-      ${result.correct ? "拼对了" : `差一点，正确答案：${escapeHTML(word.term)}`}
-    </div>` : "";
-  const hint = state.practiceMode === "dictation"
-    ? "听不清可以点“再听一次”，不会就点显示答案。"
-    : "大小写不影响判断，短语里的空格也会自动整理。";
-  return `
-    <div class="spell-box">
-      <label>
-        <span>${state.practiceMode === "dictation" ? "听写输入" : "拼写输入"}</span>
-        <input data-spell-input type="text" value="${value}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="在这里输入英文">
-      </label>
-      <div class="spell-actions">
-        <button class="primary-button" data-card-action="check-spelling" type="button">检查拼写</button>
-        <button class="secondary-button" data-card-action="clear-spelling" type="button">重写</button>
-        <button class="secondary-button audio-button" data-card-action="speak" type="button">播放读音</button>
-      </div>
-      <p>${hint}</p>
-      ${feedback}
-    </div>`;
-}
-
-function renderActiveCard() {
-  const word = activeWord();
-  if (!word) {
-    const message = state.practiceMode === "forms" && state.words.length ? "当前没有可练的动词变形" : (state.words.length ? "现在没有到期词" : "先加入第一批单词");
-    const detail = state.practiceMode === "forms" && state.words.length ? "短语不会进入变形练习；可以切换 Word List 或添加单个动词" : (state.words.length ? "切到“新词记忆”或“全部抽查”继续" : "把你发来的单词和短语放进词库");
-    els.activeCard.innerHTML = `
-      <div class="empty-card">
+function renderRecords() {
+  const records = filteredRecords();
+  if (!records.length) {
+    els.recordsList.innerHTML = `
+      <div class="empty-state">
         <div>
-          <h3>${message}</h3>
-          <p>${detail}</p>
-          <button class="primary-button" data-card-action="new-mode">新词记忆</button>
+          <h2>${state.records.length ? "没有符合条件的错题" : "还没有错题"}</h2>
+          <p>${state.records.length ? "换个筛选条件试试" : "把第一道错题放进来"}</p>
+          <button class="primary-button" id="emptyNewButton"><span aria-hidden="true">＋</span> 新错题</button>
         </div>
       </div>`;
+    document.querySelector("#emptyNewButton").addEventListener("click", () => openEditor());
     return;
   }
 
-  const progress = activeModeProgress(word);
-  const status = statusOf(word);
-  const typingMode = ["spell", "dictation", "forms"].includes(state.practiceMode);
-  const letters = typingMode ? [] : word.term.replace(/[^a-zA-Z]/g, "").slice(0, 9).split("");
-  const ribbon = typingMode
-    ? (state.practiceMode === "forms" ? "<span>F</span><span>O</span><span>R</span><span>M</span>" : "<span>S</span><span>P</span><span>E</span><span>L</span><span>L</span>")
-    : (letters.length ? letters.map((letter) => `<span>${escapeHTML(letter)}</span>`).join("") : "<span>W</span><span>O</span><span>R</span><span>D</span>");
-  const view = practiceView(word);
-  const answer = state.answerVisible ? `<p class="word-meaning">${escapeHTML(view.answer)}</p>` : `<div class="answer-mask">${escapeHTML(view.hidden)}</div>`;
-  const extra = state.answerVisible && view.extra ? `<p class="word-phrase">${escapeHTML(view.extra)}</p>` : "";
-  const note = state.answerVisible && word.note ? `<p class="word-note">备注：${escapeHTML(word.note)}</p>` : "";
-  const important = word.important ? `<p class="important-line">重点词</p>` : "";
-  const spellingBox = state.practiceMode === "forms" ? renderVerbFormsBox(word) : renderSpellingBox(word);
+  els.recordsList.innerHTML = records.map(recordCardHTML).join("");
+}
 
-  els.activeCard.innerHTML = `
-    <div class="card-top">
-      <div class="letter-ribbon">${ribbon}</div>
-      <p class="quiz-prompt">${escapeHTML(view.prompt)}</p>
-      <h3 class="${state.practiceMode === "card" || state.practiceMode === "enToZh" ? "word-term" : "quiz-target"}">${escapeHTML(view.target)}</h3>
-      ${spellingBox}
-      ${answer}
-      ${extra}
-      ${note}
-      ${important}
-      <p class="next-line">下次：${formatDateTime(progress.nextReviewAt)} · ${statusLabel(status)}</p>
-    </div>
-    <div class="card-bottom">
-      <div class="stage-track">${REVIEW_STEPS.map((_, index) => `<span class="stage-dot${index <= progress.stage ? " active" : ""}"></span>`).join("")}</div>
-      <div class="card-actions">
-        <button class="secondary-button audio-button" data-card-action="speak">读音</button>
-        <button class="secondary-button" data-card-action="show">${state.answerVisible ? "隐藏释义" : "显示释义"}</button>
-        <button class="secondary-button" data-card-action="toggle-important">${word.important ? "取消重点" : "标重点"}</button>
-        <button class="primary-button" data-card-action="remember">${progress.stage < 0 ? "记完" : "会了"}</button>
-        <button class="secondary-button" data-card-action="fuzzy">模糊</button>
-        <button class="danger-button" data-card-action="forgot">忘了</button>
+function recordCardHTML(record) {
+  const tags = record.tags.slice(0, 5).map((tag) => `<span class="tag">#${escapeHTML(tag)}</span>`).join("");
+  const due = isDue(record) ? `<span class="status-pill due-badge">待复习</span>` : "";
+  const thumbs = record.images.slice(0, 4).map((src) => `<img src="${src}" alt="题图缩略图">`).join("");
+  const reviewCount = record.reviews.length;
+  const lastReview = reviewCount ? record.reviews[reviewCount - 1].date : "未复习";
+  const questionBlock = infoBlock("题目", record.question || "暂无题目内容", "question-block");
+  const reasonBlock = infoBlock("错因", record.reason, "reason-block");
+  const analysisBlock = infoBlock("防错", record.analysis, "analysis-block");
+  const hasSolution = normalizeText(record.solution);
+  const solutionExpanded = state.expandedSolutionIds.has(record.id);
+  const solutionButton = hasSolution ? `
+            <button class="secondary-button solution-toggle" data-action="toggle-solution" data-expanded="${solutionExpanded ? "true" : "false"}">
+              ${solutionExpanded ? "隐藏解析" : "检查解析"}
+            </button>` : "";
+  const solutionBlock = hasSolution && solutionExpanded ? infoBlock("完整解析", record.solution, "solution-block") : "";
+  const actions = isPublicView() ? `
+        <div class="record-actions">
+          ${solutionButton}
+        </div>` : `
+        <div class="record-actions">
+          ${solutionButton}
+          <button class="secondary-button" data-action="review">复习</button>
+          <button class="secondary-button" data-action="edit">编辑</button>
+        </div>`;
+
+  return `
+    <article class="record-card" data-id="${escapeHTML(record.id)}">
+      <div class="record-main">
+        <div>
+          <div class="record-title-row">
+            <h3>${escapeHTML(record.title)}</h3>
+            <span class="status-pill status-${record.status}">${statusLabel(record.status)}</span>
+            ${due}
+          </div>
+          <div class="record-meta">
+            ${escapeHTML(record.subject)} · ${escapeHTML(record.chapter || "未填知识点")} · ${escapeHTML(record.source || "未填来源")}
+            <br>错题日期：${escapeHTML(record.wrongAt)} · 下次复习：${escapeHTML(record.nextReview || "未设置")} · 难度：${difficultyLabel(record.difficulty)}
+          </div>
+          <div class="study-card-body">
+            ${questionBlock}
+            ${reasonBlock}
+            ${analysisBlock}
+            ${isPublicView() ? solutionBlock : ""}
+          </div>
+          ${isPublicView() ? "" : solutionBlock}
+          <div class="badges">${tags}</div>
+        </div>
+        ${actions}
       </div>
-    </div>`;
-
-  if (state.practiceMode === "dictation" && state.lastAutoSpokenId !== word.id) {
-    state.lastAutoSpokenId = word.id;
-    window.setTimeout(() => speakTerm(word.term, { silent: true }), 120);
-  }
-}
-
-function renderTimeline() {
-  const todayWords = state.words
-    .filter(isTodayReview)
-    .filter(wordMatchesActiveGroup)
-    .sort((a, b) => activeModeProgress(a).nextReviewAt.localeCompare(activeModeProgress(b).nextReviewAt));
-
-  if (!todayWords.length) {
-    els.todayTimeline.innerHTML = `<div class="time-slot"><strong>今天</strong><div><span>暂无安排</span></div></div>`;
-    return;
-  }
-
-  els.todayTimeline.innerHTML = todayWords.slice(0, 18).map((word) => `
-    <div class="time-slot">
-      <strong>${formatTime(activeModeProgress(word).nextReviewAt)}</strong>
-      <div>
-        <span>${escapeHTML(word.term)}</span>
-        <span>${escapeHTML(word.meaning || word.phrase || "未填释义")}</span>
+      <div class="record-footer">
+        <div class="history-line">复习 ${reviewCount} 次 · 最近：${escapeHTML(lastReview)}</div>
+        <div class="image-thumbs">${thumbs}</div>
       </div>
-    </div>`).join("");
+    </article>`;
 }
 
-function filteredWords() {
-  const query = state.query.toLowerCase();
-  return state.words
-    .filter((word) => {
-      const forms = verbForms(word);
-      const text = [word.term, word.meaning, word.phrase, word.note, word.tag, forms.third, forms.past, forms.participle].join(" ").toLowerCase();
-      const matchesQuery = !query || text.includes(query);
-      const status = statusOf(word);
-      const matchesFilter = state.filter === "all" || status === state.filter || (state.filter === "important" && word.important);
-      return matchesQuery && matchesFilter && wordMatchesActiveGroup(word);
-    })
-    .sort((a, b) => {
-      const statusDiff = Number(isDue(b)) - Number(isDue(a));
-      if (statusDiff) {
-        return statusDiff;
-      }
-      return (activeModeProgress(a).nextReviewAt || "9999").localeCompare(activeModeProgress(b).nextReviewAt || "9999");
-    });
-}
+function renderReviewQueue() {
+  const queue = state.records
+    .filter(isDue)
+    .sort((a, b) => a.nextReview.localeCompare(b.nextReview))
+    .slice(0, 8);
 
-function renderWordList() {
-  const words = filteredWords();
-  if (!words.length) {
-    els.wordList.innerHTML = `<div class="empty-card"><div><h3>词库是空的</h3><p>加入单词后会出现在这里</p></div></div>`;
+  if (!queue.length) {
+    els.reviewQueue.innerHTML = `<div class="queue-item"><strong>暂无待复习</strong><span>安排好的复习会出现在这里</span></div>`;
     return;
   }
 
-  els.wordList.innerHTML = words.map((word) => {
-    const status = statusOf(word);
-    const progress = activeModeProgress(word);
-    return `
-      <article class="word-row" data-id="${escapeHTML(word.id)}">
-        <div>
-          <strong>${escapeHTML(word.term)}</strong>
-          <p>${escapeHTML(word.tag || "未标记")}</p>
-        </div>
-        <div>
-          <p>${escapeHTML(word.meaning || "未填中文")}</p>
-          <p>${escapeHTML(word.phrase || "")}</p>
-        </div>
-        <div>
-          <span class="status-pill status-${status}">${statusLabel(status)}</span>
-          ${word.important ? `<span class="status-pill status-important">重点</span>` : ""}
-          <p>${formatDateTime(progress.nextReviewAt)}</p>
-        </div>
-        <div class="mini-actions">
-          <button class="secondary-button" data-row-action="study">打开</button>
-          <button class="secondary-button" data-row-action="important">${word.important ? "取消重点" : "重点"}</button>
-          <button class="danger-button" data-row-action="delete">删</button>
-        </div>
-      </article>`;
-  }).join("");
+  els.reviewQueue.innerHTML = queue.map((record) => `
+    <button class="queue-item" data-id="${escapeHTML(record.id)}" type="button">
+      <strong>${escapeHTML(record.title)}</strong>
+      <span>${escapeHTML(record.subject)} · ${escapeHTML(record.nextReview)}</span>
+    </button>
+  `).join("");
 }
 
-function clearForm() {
-  els.wordForm.reset();
-  els.termInput.focus();
+function openEditor(id) {
+  const record = id ? state.records.find((item) => item.id === id) : null;
+  els.dialogTitle.textContent = record ? "编辑错题" : "新错题";
+  els.deleteRecordButton.hidden = !record;
+  state.pendingImages = record ? [...record.images] : [];
+
+  fields.id.value = record?.id || "";
+  fields.title.value = record?.title || "";
+  fields.subject.value = normalizeSubject(record?.subject);
+  fields.chapter.value = record?.chapter || "";
+  fields.source.value = record?.source || "作业";
+  fields.wrongAt.value = record?.wrongAt || todayISO();
+  fields.nextReview.value = record?.nextReview || addDaysISO(todayISO(), 3);
+  fields.status.value = record?.status || "new";
+  fields.difficulty.value = record?.difficulty || "2";
+  fields.question.value = record?.question || "";
+  fields.wrongAnswer.value = record?.wrongAnswer || "";
+  fields.correctAnswer.value = record?.correctAnswer || "";
+  fields.reason.value = record?.reason || "";
+  fields.analysis.value = record?.analysis || "";
+  fields.tags.value = record?.tags?.join(", ") || "";
+  els.imageInput.value = "";
+  renderImagePreview();
+  els.editorDialog.showModal();
+  fields.title.focus();
 }
 
-function wordFromForm() {
+function closeEditor() {
+  els.editorDialog.close();
+}
+
+function recordFromForm() {
+  const id = fields.id.value || createId();
+  const existing = state.records.find((record) => record.id === id);
   const now = new Date().toISOString();
-  return normalizeWord({
-    id: createId(),
-    term: normalizeText(els.termInput.value),
-    meaning: normalizeText(els.meaningInput.value),
-    phrase: normalizeText(els.phraseInput.value),
-    tag: normalizeText(els.tagInput.value),
-    note: normalizeText(els.noteInput.value),
-    forms: {
-      third: normalizeText(els.thirdPersonInput.value),
-      past: normalizeText(els.pastTenseInput.value),
-      participle: normalizeText(els.pastParticipleInput.value),
-    },
-    status: "new",
-    stage: -1,
-    createdAt: now,
+  return normalizeRecord({
+    id,
+    title: normalizeText(fields.title.value),
+    subject: normalizeSubject(fields.subject.value),
+    chapter: normalizeText(fields.chapter.value),
+    source: normalizeText(fields.source.value) || "作业",
+    wrongAt: fields.wrongAt.value || todayISO(),
+    nextReview: fields.nextReview.value,
+    status: fields.status.value,
+    difficulty: fields.difficulty.value,
+    question: normalizeText(fields.question.value),
+    wrongAnswer: normalizeText(fields.wrongAnswer.value),
+    correctAnswer: normalizeText(fields.correctAnswer.value),
+    reason: normalizeText(fields.reason.value),
+    analysis: normalizeText(fields.analysis.value),
+    tags: parseTags(fields.tags.value),
+    images: [...state.pendingImages],
+    reviews: existing?.reviews || [],
+    createdAt: existing?.createdAt || now,
     updatedAt: now,
   });
 }
 
-function addWord(event) {
+function saveRecord(event) {
   event.preventDefault();
-  const word = wordFromForm();
-  if (!word.term) {
-    return;
-  }
-  state.words.unshift(word);
-  saveWords();
-  clearForm();
-  state.mode = "new";
-  state.activeId = word.id;
-  state.answerVisible = false;
-  render();
-  showToast("已加入词库");
-}
-
-function splitImportLine(line) {
-  const trimmed = line.trim();
-  if (!trimmed) {
-    return null;
-  }
-  let parts = [];
-  if (trimmed.includes("|")) {
-    parts = trimmed.split("|");
-  } else if (trimmed.includes("\t")) {
-    parts = trimmed.split("\t");
-  } else if (/\s[-—]\s/.test(trimmed)) {
-    parts = trimmed.split(/\s[-—]\s/);
+  const record = recordFromForm();
+  const index = state.records.findIndex((item) => item.id === record.id);
+  if (index >= 0) {
+    state.records[index] = record;
   } else {
-    parts = trimmed.split(/[,，；;]/);
+    state.records.unshift(record);
   }
-  parts = parts.map(normalizeText).filter(Boolean);
-  const hasForms = parts.length >= 6;
-  return {
-    term: parts[0] || trimmed,
-    meaning: parts[1] || "",
-    phrase: parts[2] || "",
-    forms: hasForms ? {
-      third: parts[3] || "",
-      past: parts[4] || "",
-      participle: parts[5] || "",
-    } : emptyVerbForms(),
-    note: (hasForms ? parts.slice(6) : parts.slice(3)).join("；"),
-  };
-}
-
-function bulkAdd() {
-  const lines = els.bulkInput.value.split(/\r?\n/).map(splitImportLine).filter(Boolean);
-  if (!lines.length) {
-    showToast("没有识别到单词");
+  if (!saveRecords()) {
     return;
   }
-  const now = new Date().toISOString();
-  const existing = new Set(state.words.map((word) => word.term.toLowerCase()));
-  const created = lines
-    .filter((item) => item.term && !existing.has(item.term.toLowerCase()))
-    .map((item) => normalizeWord({
-      id: createId(),
-      term: item.term,
-      meaning: item.meaning,
-      phrase: item.phrase,
-      forms: item.forms,
-      note: item.note,
-      tag: "导入",
-      status: "new",
-      stage: -1,
-      createdAt: now,
-      updatedAt: now,
-    }));
-  state.words = [...created, ...state.words];
-  saveWords();
-  els.bulkInput.value = "";
-  state.mode = "new";
-  state.activeId = created[0]?.id || state.activeId;
-  state.answerVisible = false;
+  closeEditor();
   render();
-  showToast(`已加入 ${created.length} 个词条`);
+  showToast("已保存");
 }
 
-function handleCardAction(action) {
-  if (action === "new-mode") {
-    setMode("new");
+function deleteCurrentRecord() {
+  const id = fields.id.value;
+  const record = state.records.find((item) => item.id === id);
+  if (!record) {
     return;
   }
-  const word = activeWord();
-  if (!word) {
+  if (!confirm(`删除「${record.title}」？`)) {
     return;
   }
-  if (action === "speak") {
-    speakTerm(word.term);
-    return;
-  }
-  if (action === "check-spelling") {
-    const correct = isSpellingCorrect(state.spellingDraft, word);
-    const completedAt = new Date().toISOString();
-    state.spellingResult = { correct };
-    state.answerVisible = true;
-    recordModeHistory(word, {
-      time: completedAt,
-      result: correct ? "spell-correct" : "spell-wrong",
-      nextReviewAt: modeProgress(word).nextReviewAt || "",
-    });
-    if (!correct) {
-      word.important = true;
-    }
-    word.updatedAt = completedAt;
-    saveWords();
-    render();
-    showToast(correct ? "拼对了" : "已标为重点，等会儿再听写");
-    return;
-  }
-  if (action === "check-forms") {
-    const correct = isVerbFormsCorrect(state.formDrafts, word);
-    const completedAt = new Date().toISOString();
-    state.formResult = { correct };
-    state.answerVisible = true;
-    recordModeHistory(word, {
-      time: completedAt,
-      result: correct ? "forms-correct" : "forms-wrong",
-      nextReviewAt: modeProgress(word).nextReviewAt || "",
-    });
-    if (!correct) {
-      word.important = true;
-    }
-    word.updatedAt = completedAt;
-    saveWords();
-    render();
-    showToast(correct ? "变形拼对了" : "变形有错，已放进重点复盘");
-    return;
-  }
-  if (action === "clear-spelling") {
-    resetTypingState();
-    state.answerVisible = false;
-    renderActiveCard();
-    return;
-  }
-  if (action === "show") {
-    state.answerVisible = !state.answerVisible;
-    renderActiveCard();
-    return;
-  }
-  if (action === "toggle-important") {
-    word.important = !word.important;
-    word.updatedAt = new Date().toISOString();
-    saveWords();
-    render();
-    showToast(word.important ? "已加入重点词" : "已取消重点");
-    return;
-  }
-  if (["remember", "fuzzy", "forgot"].includes(action)) {
-    const progress = activeModeProgress(word);
-    scheduleNext(word, progress.stage < 0 && action === "remember" ? "new" : action);
-    if (state.sprint.active) {
-      state.sprint.completed += 1;
-    }
-    saveWords();
-    state.answerVisible = false;
-    resetTypingState();
-    chooseActiveWord(true);
-    render();
-  }
-}
-
-function setMode(mode) {
-  state.mode = mode;
-  state.activeId = null;
-  state.answerVisible = false;
-  resetTypingState();
-  state.lastAutoSpokenId = null;
-  render();
-}
-
-function startSprint() {
-  if (state.sprint.active) {
-    endSprint();
-    render();
-    return;
-  }
-  const now = nowDate();
-  state.sprint = {
-    active: true,
-    startedAt: now.toISOString(),
-    endsAt: new Date(now.getTime() + 15 * 60 * 1000).toISOString(),
-    completed: 0,
-  };
-  state.mode = "all";
-  state.activeId = null;
-  state.answerVisible = false;
-  resetTypingState();
-  state.lastAutoSpokenId = null;
-  render();
-  showToast("15分钟冲刺开始：到期 → 重点 → 新词");
-}
-
-function startNewWords() {
-  const newWords = state.words.filter((word) => statusOf(word) === "new" && wordMatchesActiveGroup(word));
-  if (!newWords.length) {
-    showToast("没有新词了");
-    return;
-  }
-  setMode("new");
-}
-
-function batchLearnNewWords() {
-  const visibleNew = filteredWords().filter((word) => statusOf(word) === "new");
-  const words = visibleNew.length ? visibleNew : state.words.filter((word) => statusOf(word) === "new" && wordMatchesActiveGroup(word));
-  if (!words.length) {
-    showToast("没有新词需要安排");
-    return;
-  }
-
-  const scope = visibleNew.length === words.length && (state.query || state.filter !== "all") ? "当前筛选的新词" : "所有新词";
-  if (!confirm(`把${scope}（${words.length} 个）全部标为已记完，并从现在开始安排 20 分钟后的第一次复习？`)) {
-    return;
-  }
-
-  const completedAt = nowDate();
-  words.forEach((word) => scheduleNext(word, "new", { completedAt, silent: true }));
-  saveWords();
-  state.mode = "due";
-  state.activeId = null;
-  state.answerVisible = false;
-  render();
-  showToast(`已安排 ${words.length} 个新词：${formatDateTime(activeModeProgress(words[0]).nextReviewAt)} 复习`);
-}
-
-function deleteWord(id) {
-  const word = state.words.find((item) => item.id === id);
-  if (!word) {
-    return;
-  }
-  if (!confirm(`删除「${word.term}」？`)) {
-    return;
-  }
-  state.words = state.words.filter((item) => item.id !== id);
-  saveWords();
-  if (state.activeId === id) {
-    state.activeId = null;
-  }
+  state.records = state.records.filter((item) => item.id !== id);
+  saveRecords();
+  closeEditor();
   render();
   showToast("已删除");
 }
 
-function exportWords() {
+function openReview(id) {
+  const record = state.records.find((item) => item.id === id);
+  if (!record) {
+    return;
+  }
+  const nextDate = record.status === "mastered" ? "" : addDaysISO(todayISO(), record.reviews.length >= 2 ? 14 : 7);
+  els.reviewTitle.textContent = record.title;
+  reviewFields.id.value = record.id;
+  reviewFields.date.value = todayISO();
+  reviewFields.result.value = "correct";
+  reviewFields.nextDate.value = nextDate;
+  reviewFields.status.value = record.reviews.length >= 2 ? "mastered" : "reviewing";
+  reviewFields.note.value = "";
+  els.reviewDialog.showModal();
+}
+
+function closeReview() {
+  els.reviewDialog.close();
+}
+
+function saveReview(event) {
+  event.preventDefault();
+  const record = state.records.find((item) => item.id === reviewFields.id.value);
+  if (!record) {
+    return;
+  }
+  const entry = {
+    date: reviewFields.date.value || todayISO(),
+    result: reviewFields.result.value,
+    note: normalizeText(reviewFields.note.value),
+  };
+  record.reviews.push(entry);
+  record.status = reviewFields.result.value === "wrong" ? "reviewing" : reviewFields.status.value;
+  record.nextReview = reviewFields.result.value === "wrong"
+    ? (reviewFields.nextDate.value || addDaysISO(entry.date, 2))
+    : reviewFields.nextDate.value;
+  record.updatedAt = new Date().toISOString();
+  saveRecords();
+  closeReview();
+  render();
+  showToast("复习已记录");
+}
+
+function renderImagePreview() {
+  if (!state.pendingImages.length) {
+    els.imagePreview.innerHTML = "";
+    return;
+  }
+  els.imagePreview.innerHTML = state.pendingImages.map((src, index) => `
+    <div class="thumb-tile">
+      <img src="${src}" alt="题图 ${index + 1}">
+      <button type="button" data-remove-image="${index}" title="移除图片" aria-label="移除图片">×</button>
+    </div>
+  `).join("");
+}
+
+async function handleImages(event) {
+  const files = [...event.target.files].filter((file) => file.type.startsWith("image/"));
+  if (!files.length) {
+    return;
+  }
+  for (const file of files) {
+    const compressed = await compressImage(file);
+    state.pendingImages.push(compressed);
+  }
+  renderImagePreview();
+  els.imageInput.value = "";
+}
+
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const maxSide = 1280;
+        const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.78));
+      };
+      image.onerror = reject;
+      image.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function exportRecords() {
   const payload = {
-    app: "专升本单词记忆",
+    app: "错题整理本",
     version: 1,
-    reviewSteps: REVIEW_STEPS.map((step) => step.label),
     exportedAt: new Date().toISOString(),
-    words: state.words,
+    records: state.records,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `专升本单词词库-${todayKey()}.json`;
+  link.download = `错题整理本-${todayISO()}.json`;
   link.click();
   URL.revokeObjectURL(url);
+  showToast("备份已导出");
 }
 
-async function importWords(event) {
+async function importRecords(event) {
   const file = event.target.files[0];
   if (!file) {
     return;
@@ -5408,179 +1251,171 @@ async function importWords(event) {
   try {
     const text = await file.text();
     const parsed = JSON.parse(text);
-    const incoming = Array.isArray(parsed) ? parsed : parsed.words;
+    const incoming = Array.isArray(parsed) ? parsed : parsed.records;
     if (!Array.isArray(incoming)) {
-      throw new Error("Invalid file");
+      throw new Error("Invalid backup");
     }
-    const records = incoming.map(normalizeWord);
-    const replace = confirm("确定替换当前词库？取消则合并导入。");
+    const records = incoming.map(normalizeRecord);
+    const replace = confirm("选择“确定”会替换当前数据，选择“取消”会合并导入。");
     if (replace) {
-      state.words = records;
+      state.records = records;
     } else {
-      const ids = new Set(state.words.map((word) => word.id));
-      state.words = [...records.filter((word) => !ids.has(word.id)), ...state.words];
+      const existingIds = new Set(state.records.map((record) => record.id));
+      state.records = [...records.filter((record) => !existingIds.has(record.id)), ...state.records];
     }
-    saveWords();
-    state.activeId = null;
+    saveRecords();
     render();
     showToast("导入完成");
   } catch {
-    showToast("导入失败，请选择正确的词库文件");
+    showToast("导入失败，请选择正确的备份文件");
   } finally {
     event.target.value = "";
   }
 }
 
-function planText() {
-  const items = state.words
-    .filter(wordMatchesActiveGroup)
-    .filter(isTodayReview)
-    .sort((a, b) => activeModeProgress(a).nextReviewAt.localeCompare(activeModeProgress(b).nextReviewAt));
-  if (!items.length) {
-    return "今天暂无单词复习安排。";
-  }
-  return items.map((word) => `${formatTime(activeModeProgress(word).nextReviewAt)}  ${word.term}  ${word.meaning || word.phrase || ""}`).join("\n");
+function resetFilters() {
+  state.filters = {
+    query: "",
+    subject: "all",
+    status: "all",
+    tag: "all",
+    dueOnly: false,
+    sort: "newest",
+  };
+  els.searchInput.value = "";
+  els.statusFilter.value = "all";
+  els.sortSelect.value = "newest";
+  els.dueOnlyToggle.checked = false;
+  render();
 }
 
-async function copyPlan() {
-  const text = planText();
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast("今日计划已复制");
-  } catch {
-    showToast(text);
+function toggleSolution(recordId) {
+  if (state.expandedSolutionIds.has(recordId)) {
+    state.expandedSolutionIds.delete(recordId);
+  } else {
+    state.expandedSolutionIds.add(recordId);
   }
+  renderRecords();
 }
 
 function wireEvents() {
-  els.wordForm.addEventListener("submit", addWord);
-  els.clearFormButton.addEventListener("click", clearForm);
-  els.bulkAddButton.addEventListener("click", bulkAdd);
-  els.clearBulkButton.addEventListener("click", () => {
-    els.bulkInput.value = "";
-    els.bulkInput.focus();
-  });
-  els.activeCard.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-card-action]");
-    if (button) {
-      handleCardAction(button.dataset.cardAction);
+  els.newRecordButton.addEventListener("click", () => openEditor());
+  els.cloudSyncButton.addEventListener("click", openCloudDialog);
+  els.closeCloudButton.addEventListener("click", closeCloudDialog);
+  els.cancelCloudButton.addEventListener("click", closeCloudDialog);
+  els.copyPublicLinkButton.addEventListener("click", copyPublicLink);
+  els.cloudForm.addEventListener("submit", handleCloudSubmit);
+  els.loadCloudButton.addEventListener("click", () => {
+    if (window.confirm("会用云端记录覆盖这台设备里的本地错题，确定继续吗？")) {
+      loadCloudToLocal();
     }
   });
-  els.activeCard.addEventListener("input", (event) => {
-    if (event.target.matches("[data-spell-input]")) {
-      state.spellingDraft = event.target.value;
-      state.spellingResult = null;
-    }
-    if (event.target.matches("[data-form-input]")) {
-      state.formDrafts[event.target.dataset.formInput] = event.target.value;
-      state.formResult = null;
-    }
+  els.closeEditorButton.addEventListener("click", closeEditor);
+  els.cancelEditorButton.addEventListener("click", closeEditor);
+  els.deleteRecordButton.addEventListener("click", deleteCurrentRecord);
+  els.recordForm.addEventListener("submit", saveRecord);
+
+  els.closeReviewButton.addEventListener("click", closeReview);
+  els.cancelReviewButton.addEventListener("click", closeReview);
+  els.reviewForm.addEventListener("submit", saveReview);
+
+  els.searchInput.addEventListener("input", (event) => {
+    state.filters.query = event.target.value.trim();
+    renderRecords();
   });
-  els.activeCard.addEventListener("keydown", (event) => {
-    if (event.target.matches("[data-spell-input]") && event.key === "Enter") {
-      event.preventDefault();
-      handleCardAction("check-spelling");
-    }
-    if (event.target.matches("[data-form-input]") && event.key === "Enter") {
-      event.preventDefault();
-      handleCardAction("check-forms");
-    }
+  els.subjectFilter.addEventListener("change", (event) => {
+    state.filters.subject = event.target.value;
+    renderSubjectStrip();
+    renderRecords();
   });
-  els.wordList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-row-action]");
+  els.statusFilter.addEventListener("change", (event) => {
+    state.filters.status = event.target.value;
+    renderRecords();
+  });
+  els.tagFilter.addEventListener("change", (event) => {
+    state.filters.tag = event.target.value;
+    renderRecords();
+  });
+  els.sortSelect.addEventListener("change", (event) => {
+    state.filters.sort = event.target.value;
+    renderRecords();
+  });
+  els.dueOnlyToggle.addEventListener("change", (event) => {
+    state.filters.dueOnly = event.target.checked;
+    renderRecords();
+  });
+  els.clearFiltersButton.addEventListener("click", resetFilters);
+
+  els.subjectStrip.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-subject]");
     if (!button) {
       return;
     }
-    const row = button.closest("[data-id]");
-    if (!row) {
+    state.filters.subject = button.dataset.subject;
+    render();
+  });
+
+  els.recordsList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button) {
       return;
     }
-    if (button.dataset.rowAction === "study") {
-      state.mode = "all";
-      state.activeId = row.dataset.id;
-      state.answerVisible = false;
-      resetTypingState();
-      state.lastAutoSpokenId = null;
-      render();
-    }
-    if (button.dataset.rowAction === "important") {
-      const word = state.words.find((item) => item.id === row.dataset.id);
-      if (word) {
-        word.important = !word.important;
-        word.updatedAt = new Date().toISOString();
-        saveWords();
-        render();
-      }
-    }
-    if (button.dataset.rowAction === "delete") {
-      deleteWord(row.dataset.id);
-    }
-  });
-  els.groupProgress.addEventListener("click", (event) => {
-    const card = event.target.closest('[data-group-action="study"]');
+    const card = button.closest("[data-id]");
     if (!card) {
       return;
     }
-    state.activeGroup = card.dataset.group || "all";
-    state.activeId = null;
-    state.answerVisible = false;
-    resetTypingState();
-    state.lastAutoSpokenId = null;
-    render();
-    showToast(state.activeGroup === "all" ? "已切回全部 Word List" : `只背 ${state.activeGroup}`);
+    if (button.dataset.action === "toggle-solution") {
+      toggleSolution(card.dataset.id);
+      return;
+    }
+    if (isPublicView()) {
+      return;
+    }
+    if (button.dataset.action === "edit") {
+      openEditor(card.dataset.id);
+    }
+    if (button.dataset.action === "review") {
+      openReview(card.dataset.id);
+    }
   });
-  els.searchInput.addEventListener("input", (event) => {
-    state.query = event.target.value.trim();
-    renderWordList();
+
+  els.reviewQueue.addEventListener("click", (event) => {
+    if (isPublicView()) {
+      return;
+    }
+    const item = event.target.closest("[data-id]");
+    if (item) {
+      openReview(item.dataset.id);
+    }
   });
-  els.statusFilter.addEventListener("change", (event) => {
-    state.filter = event.target.value;
-    renderWordList();
+
+  els.imageInput.addEventListener("change", handleImages);
+  els.imagePreview.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-remove-image]");
+    if (!button) {
+      return;
+    }
+    state.pendingImages.splice(Number(button.dataset.removeImage), 1);
+    renderImagePreview();
   });
+  els.clearImagesButton.addEventListener("click", () => {
+    state.pendingImages = [];
+    renderImagePreview();
+  });
+
+  els.exportButton.addEventListener("click", exportRecords);
   els.importButton.addEventListener("click", () => els.importInput.click());
-  els.importInput.addEventListener("change", importWords);
-  els.exportButton.addEventListener("click", exportWords);
-  els.copyPlanButton.addEventListener("click", copyPlan);
-  els.examDateInput.addEventListener("change", (event) => {
-    state.settings.examDate = event.target.value || defaultExamDate();
-    saveSettings();
-    renderDashboard();
-  });
-  els.dictationOrderSelect?.addEventListener("change", (event) => {
-    state.dictationOrder = event.target.value;
-    state.activeId = null;
-    state.answerVisible = false;
-    resetTypingState();
-    state.lastAutoSpokenId = null;
-    render();
-  });
-  document.querySelectorAll("[data-practice-mode]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.practiceMode = button.dataset.practiceMode;
-      state.answerVisible = false;
-      resetTypingState();
-      state.lastAutoSpokenId = null;
-      render();
-    });
-  });
-  els.startNewButton.addEventListener("click", startNewWords);
-  els.batchLearnButton.addEventListener("click", batchLearnNewWords);
-  els.sprintButton.addEventListener("click", startSprint);
-  els.focusDueButton.addEventListener("click", () => setMode("due"));
-  els.dueModeButton.addEventListener("click", () => setMode("due"));
-  els.newModeButton.addEventListener("click", () => setMode("new"));
-  els.allModeButton.addEventListener("click", () => setMode("all"));
+  els.importInput.addEventListener("change", importRecords);
 }
 
+setupCloudUi();
 wireEvents();
 render();
-persistBuiltinWordsIfNeeded();
-setInterval(() => {
-  renderClock();
-  renderStats();
-  renderDashboard();
-  renderTimeline();
-  renderGroupProgress();
-  renderSprintStatus();
-  renderDailyReport();
-}, 30 * 1000);
+persistLoadedRecordsIfNeeded();
+setupInstallAppButton();
+registerServiceWorker();
+if (isPublicView()) {
+  loadPublicView();
+} else {
+  loadCloudToLocal({ silent: true });
+}
