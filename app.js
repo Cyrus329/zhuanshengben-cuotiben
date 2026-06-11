@@ -1,5 +1,6 @@
 const STORAGE_KEY = "wrong-question-organizer:v1";
 const CLOUD_CONFIG_KEY = "wrong-question-organizer:cloud-config:v1";
+const SHARE_BASE_URL_KEY = "wrong-question-organizer:share-base-url:v1";
 const SUPABASE_URL = "https://fsizdxkwrxzopkoouipr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_BfWyJfb6c4GrV0JYLXejUg_QnkuhPvw";
 const URL_PARAMS = new URLSearchParams(window.location.search);
@@ -63,6 +64,7 @@ const els = {
   cloudNameInput: document.querySelector("#cloudNameInput"),
   cloudPinInput: document.querySelector("#cloudPinInput"),
   cloudPublicInput: document.querySelector("#cloudPublicInput"),
+  shareBaseUrlInput: document.querySelector("#shareBaseUrlInput"),
   cloudStatus: document.querySelector("#cloudStatus"),
   dialogTitle: document.querySelector("#dialogTitle"),
   reviewTitle: document.querySelector("#reviewTitle"),
@@ -474,6 +476,59 @@ function saveCloudConfig(config) {
   }));
 }
 
+function normalizeShareBaseUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return "";
+    }
+    url.search = "";
+    url.hash = "";
+    const lastPathPart = url.pathname.split("/").pop();
+    if (lastPathPart && !lastPathPart.includes(".") && !url.pathname.endsWith("/")) {
+      url.pathname = `${url.pathname}/`;
+    }
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+function getCurrentHttpBaseUrl() {
+  if (window.location.protocol !== "http:" && window.location.protocol !== "https:") {
+    return "";
+  }
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  return normalizeShareBaseUrl(url.href);
+}
+
+function getSavedShareBaseUrl() {
+  try {
+    return normalizeShareBaseUrl(localStorage.getItem(SHARE_BASE_URL_KEY));
+  } catch {
+    return "";
+  }
+}
+
+function getShareBaseUrl() {
+  return getSavedShareBaseUrl() || getCurrentHttpBaseUrl();
+}
+
+function saveShareBaseUrl(value) {
+  const normalized = normalizeShareBaseUrl(value);
+  if (!normalized) {
+    return "";
+  }
+  localStorage.setItem(SHARE_BASE_URL_KEY, normalized);
+  return normalized;
+}
+
 function setCloudStatus(message, tone = "neutral") {
   if (!els.cloudStatus) {
     return;
@@ -553,22 +608,25 @@ async function cloudRequest(path, options = {}) {
   }
 }
 
-function getPublicLink(slug) {
+function buildShareLink(slug, mode) {
   const publicSlug = normalizeCloudSlug(slug);
-  const url = new URL(window.location.href);
+  const baseUrl = normalizeShareBaseUrl(els.shareBaseUrlInput?.value) || getShareBaseUrl();
+  if (!publicSlug || !baseUrl) {
+    return "";
+  }
+  const url = new URL(baseUrl);
   url.search = "";
   url.hash = "";
-  url.searchParams.set("public", publicSlug);
+  url.searchParams.set(mode, publicSlug);
   return url.href;
 }
 
+function getPublicLink(slug) {
+  return buildShareLink(slug, "public");
+}
+
 function getEditLink(slug) {
-  const editSlug = normalizeCloudSlug(slug);
-  const url = new URL(window.location.href);
-  url.search = "";
-  url.hash = "";
-  url.searchParams.set("edit", editSlug);
-  return url.href;
+  return buildShareLink(slug, "edit");
 }
 
 async function copyText(value) {
@@ -597,19 +655,27 @@ function openCloudDialog() {
   }
   const config = getCloudConfig();
   const slug = isSharedEditView() ? EDITOR_VIEW_SLUG : config.slug;
+  const shareBaseUrl = getShareBaseUrl();
   els.cloudSlugInput.value = slug;
   els.cloudNameInput.value = isSharedEditView() ? "" : config.displayName;
   els.cloudPinInput.value = config.slug === slug ? config.pin : "";
   els.cloudPublicInput.checked = config.isPublic;
+  if (els.shareBaseUrlInput) {
+    els.shareBaseUrlInput.value = shareBaseUrl;
+  }
   if (els.cloudSubmitButton) {
     els.cloudSubmitButton.textContent = isSharedEditView() ? "连接并加载云端" : "保存并开启同步";
   }
+  const localShareHint = window.location.protocol === "file:" && !shareBaseUrl
+    ? "当前是从 D 盘或本地文件打开，复制公开链接或协作链接前，请先填写 GitHub Pages 网页地址。"
+    : "";
   setCloudStatus(
-    isSharedEditView()
+    localShareHint || (isSharedEditView()
       ? `协作编辑编号：${slug}。输入编辑密码后，会直接加载并修改同一份云端数据。`
       : config.slug
       ? `当前编号：${config.slug}。保存后别人可用公开链接看你的进度。`
-      : "第一次使用前，请先在 Supabase 运行 setup 文件，再填写公开编号和编辑密码。",
+      : "第一次使用前，请先在 Supabase 运行 setup 文件，再填写公开编号和编辑密码。"),
+    localShareHint ? "error" : "neutral",
   );
   if (els.cloudDialog.showModal) {
     els.cloudDialog.showModal();
@@ -827,6 +893,14 @@ async function copyPublicLink() {
     return;
   }
   const link = getPublicLink(slug);
+  if (!link) {
+    setCloudStatus("当前是从 D 盘或本地文件打开，请先在“网页地址”填你的 GitHub Pages 地址，再复制链接。", "error");
+    els.shareBaseUrlInput?.focus();
+    return;
+  }
+  if (els.shareBaseUrlInput?.value) {
+    saveShareBaseUrl(els.shareBaseUrlInput.value);
+  }
   try {
     await copyText(link);
     setCloudStatus(`公开链接已复制：${link}`, "ok");
@@ -843,6 +917,14 @@ async function copyEditLink() {
     return;
   }
   const link = getEditLink(slug);
+  if (!link) {
+    setCloudStatus("当前是从 D 盘或本地文件打开，请先在“网页地址”填你的 GitHub Pages 地址，再复制协作链接。", "error");
+    els.shareBaseUrlInput?.focus();
+    return;
+  }
+  if (els.shareBaseUrlInput?.value) {
+    saveShareBaseUrl(els.shareBaseUrlInput.value);
+  }
   try {
     await copyText(link);
     setCloudStatus(`协作链接已复制：${link}。别人还需要编辑密码才能改云端数据。`, "ok");
@@ -867,6 +949,15 @@ async function handleCloudSubmit(event) {
   if (pin.length < 4) {
     setCloudStatus("编辑密码至少 4 位。", "error");
     return;
+  }
+  if (els.shareBaseUrlInput && els.shareBaseUrlInput.value.trim()) {
+    const shareBaseUrl = saveShareBaseUrl(els.shareBaseUrlInput.value);
+    if (!shareBaseUrl) {
+      setCloudStatus("网页地址要以 https:// 开头，比如 https://你的名字.github.io/仓库名/。", "error");
+      els.shareBaseUrlInput.focus();
+      return;
+    }
+    els.shareBaseUrlInput.value = shareBaseUrl;
   }
   els.cloudSlugInput.value = slug;
   saveCloudConfig({
@@ -1462,6 +1553,15 @@ function wireEvents() {
   els.copyPublicLinkButton.addEventListener("click", copyPublicLink);
   els.copyEditLinkButton.addEventListener("click", copyEditLink);
   els.cloudForm.addEventListener("submit", handleCloudSubmit);
+  els.shareBaseUrlInput?.addEventListener("change", () => {
+    const shareBaseUrl = saveShareBaseUrl(els.shareBaseUrlInput.value);
+    if (shareBaseUrl) {
+      els.shareBaseUrlInput.value = shareBaseUrl;
+      setCloudStatus("网页地址已保存，公开链接和协作链接会用这个地址生成。", "ok");
+    } else if (els.shareBaseUrlInput.value.trim()) {
+      setCloudStatus("网页地址要以 https:// 开头，比如 https://你的名字.github.io/仓库名/。", "error");
+    }
+  });
   els.loadCloudButton.addEventListener("click", () => {
     if (window.confirm("会用云端记录覆盖这台设备里的本地错题，确定继续吗？")) {
       loadCloudToLocal();

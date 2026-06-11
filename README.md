@@ -20,7 +20,15 @@
 
 1. 先在 Supabase 的 SQL Editor 运行 `supabase-setup.sql`。
 2. 打开错题本，点“云同步”。
-3. 填公开编号、显示名称、编辑密码，点“保存并开启同步”。
-4. 复制公开链接给别人，格式类似：
+3. 填公开编号、显示名称、编辑密码和 GitHub Pages 网页地址，点“保存并开启同步”。
+4. 复制公开链接或协作链接给别人。公开链接只能看，协作链接需要编辑密码才能改同一份云端数据。
+
+注意：如果你是从 D 盘直接打开 `index.html`，请先在“网页地址”里填 GitHub Pages 网址，否则复制出来的是本地文件地址，别人打不开。
+
+公开链接格式类似：
 
 `https://你的用户名.github.io/wrong-question-organizer/?public=你的公开编号`
+
+协作链接格式类似：
+
+`https://你的用户名.github.io/wrong-question-organizer/?edit=你的公开编号`
