@@ -287,11 +287,14 @@
       </div>
       <p class="cloud-status" id="cloudStatus">第一次使用前，请先在 Supabase 运行 setup 文件。</p>
       <div class="dialog-actions">
-        <button class="secondary-button" type="button" id="copyPublicLinkButton">复制公开链接</button>
+        <div>
+          <button class="secondary-button" type="button" id="copyPublicLinkButton">复制公开链接</button>
+          <button class="secondary-button" type="button" id="copyEditLinkButton">复制协作链接</button>
+        </div>
         <div>
           <button class="secondary-button" type="button" id="loadCloudButton">从云端加载</button>
           <button class="secondary-button" type="button" id="cancelCloudButton">取消</button>
-          <button class="primary-button" type="submit">保存并开启同步</button>
+          <button class="primary-button" type="submit" id="cloudSubmitButton">保存并开启同步</button>
         </div>
       </div>
     </form>

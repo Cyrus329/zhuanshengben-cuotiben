@@ -4,6 +4,7 @@ const SUPABASE_URL = "https://fsizdxkwrxzopkoouipr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_BfWyJfb6c4GrV0JYLXejUg_QnkuhPvw";
 const URL_PARAMS = new URLSearchParams(window.location.search);
 const PUBLIC_VIEWER_SLUG = normalizeCloudSlug(URL_PARAMS.get("public") || URL_PARAMS.get("view") || "");
+const EDITOR_VIEW_SLUG = normalizeCloudSlug(URL_PARAMS.get("edit") || "");
 const SUBJECTS = ["高数", "计算机", "英语"];
 const SUBJECT_ALIASES = new Map([
   ["数学", "高数"],
@@ -56,6 +57,8 @@ const els = {
   cancelCloudButton: document.querySelector("#cancelCloudButton"),
   loadCloudButton: document.querySelector("#loadCloudButton"),
   copyPublicLinkButton: document.querySelector("#copyPublicLinkButton"),
+  copyEditLinkButton: document.querySelector("#copyEditLinkButton"),
+  cloudSubmitButton: document.querySelector("#cloudSubmitButton"),
   cloudSlugInput: document.querySelector("#cloudSlugInput"),
   cloudNameInput: document.querySelector("#cloudNameInput"),
   cloudPinInput: document.querySelector("#cloudPinInput"),
@@ -426,6 +429,10 @@ function isPublicView() {
   return Boolean(PUBLIC_VIEWER_SLUG);
 }
 
+function isSharedEditView() {
+  return Boolean(EDITOR_VIEW_SLUG) && !isPublicView();
+}
+
 function normalizeCloudSlug(value) {
   return String(value || "")
     .trim()
@@ -479,7 +486,8 @@ function setCloudBusy(isBusy) {
   [
     els.loadCloudButton,
     els.copyPublicLinkButton,
-    els.cloudForm ? els.cloudForm.querySelector('[type="submit"]') : null,
+    els.copyEditLinkButton,
+    els.cloudSubmitButton,
   ].forEach((button) => {
     if (button) {
       button.disabled = isBusy;
@@ -504,6 +512,9 @@ function cloudErrorMessage(error) {
   }
   if (message.includes("wrong pin")) {
     return "编辑密码不对。";
+  }
+  if (message.includes("cloud profile not found")) {
+    return "还没有这个云端编号。先用自己的错题本保存并开启同步，再分享协作链接。";
   }
   if (message.includes("Failed to fetch")) {
     return "网络没有连上，或 Supabase 地址暂时访问不了。";
@@ -551,6 +562,15 @@ function getPublicLink(slug) {
   return url.href;
 }
 
+function getEditLink(slug) {
+  const editSlug = normalizeCloudSlug(slug);
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("edit", editSlug);
+  return url.href;
+}
+
 async function copyText(value) {
   if (navigator.clipboard && window.isSecureContext) {
     await navigator.clipboard.writeText(value);
@@ -571,13 +591,23 @@ function openCloudDialog() {
   if (!els.cloudDialog) {
     return;
   }
+  if (isSharedEditView()) {
+    document.body.classList.add("shared-edit-view");
+    setCloudStatus(`协作编辑编号：${EDITOR_VIEW_SLUG}。输入编辑密码后即可直接改同一份云端数据。`);
+  }
   const config = getCloudConfig();
-  els.cloudSlugInput.value = config.slug;
-  els.cloudNameInput.value = config.displayName;
-  els.cloudPinInput.value = config.pin;
+  const slug = isSharedEditView() ? EDITOR_VIEW_SLUG : config.slug;
+  els.cloudSlugInput.value = slug;
+  els.cloudNameInput.value = isSharedEditView() ? "" : config.displayName;
+  els.cloudPinInput.value = config.slug === slug ? config.pin : "";
   els.cloudPublicInput.checked = config.isPublic;
+  if (els.cloudSubmitButton) {
+    els.cloudSubmitButton.textContent = isSharedEditView() ? "连接并加载云端" : "保存并开启同步";
+  }
   setCloudStatus(
-    config.slug
+    isSharedEditView()
+      ? `协作编辑编号：${slug}。输入编辑密码后，会直接加载并修改同一份云端数据。`
+      : config.slug
       ? `当前编号：${config.slug}。保存后别人可用公开链接看你的进度。`
       : "第一次使用前，请先在 Supabase 运行 setup 文件，再填写公开编号和编辑密码。",
   );
@@ -652,8 +682,28 @@ function scheduleCloudSync() {
   }, 1200);
 }
 
-async function loadCloudRecords(slug) {
+async function verifyCloudPin(slug, pin) {
+  return cloudRequest("/rest/v1/rpc/verify_study_cloud_pin", {
+    method: "POST",
+    body: JSON.stringify({
+      p_slug: normalizeCloudSlug(slug),
+      p_pin: pin,
+    }),
+  });
+}
+
+async function loadCloudRecords(slug, pin = "") {
   const publicSlug = normalizeCloudSlug(slug);
+  if (pin) {
+    const rows = await cloudRequest("/rest/v1/rpc/load_study_cloud", {
+      method: "POST",
+      body: JSON.stringify({
+        p_slug: publicSlug,
+        p_pin: pin,
+      }),
+    });
+    return Array.isArray(rows) ? rows.map((record) => normalizeRecord(record)) : [];
+  }
   const rows = await cloudRequest(`/rest/v1/study_cloud_records?select=record&slug=eq.${encodeURIComponent(publicSlug)}&order=record_id.asc`);
   return Array.isArray(rows) ? rows.map((row) => normalizeRecord(row.record || row)) : [];
 }
@@ -676,7 +726,7 @@ async function loadCloudToLocal({ silent = false } = {}) {
     setCloudStatus("正在从云端加载...", "loading");
   }
   try {
-    const records = await loadCloudRecords(config.slug);
+    const records = await loadCloudRecords(config.slug, config.pin);
     if (!records.length) {
       if (!silent) {
         setCloudStatus("云端还没有记录，先点“保存并开启同步”。", "neutral");
@@ -702,6 +752,44 @@ async function loadCloudToLocal({ silent = false } = {}) {
     return false;
   } finally {
     suppressCloudSync = false;
+  }
+}
+
+async function connectSharedEditCloud() {
+  const slug = normalizeCloudSlug(els.cloudSlugInput.value || EDITOR_VIEW_SLUG);
+  const pin = els.cloudPinInput.value.trim();
+  if (!slug) {
+    setCloudStatus("协作编号不能为空。", "error");
+    return false;
+  }
+  if (pin.length < 4) {
+    setCloudStatus("编辑密码至少 4 位。", "error");
+    return false;
+  }
+  setCloudBusy(true);
+  setCloudStatus("正在验证编辑密码...", "loading");
+  try {
+    await verifyCloudPin(slug, pin);
+    saveCloudConfig({
+      slug,
+      pin,
+      displayName: els.cloudNameInput.value,
+      isPublic: els.cloudPublicInput.checked,
+    });
+    setCloudStatus("密码正确，正在加载云端数据...", "loading");
+    const loaded = await loadCloudToLocal({ silent: false });
+    if (loaded) {
+      closeCloudDialog();
+      showToast("已连接协作云端");
+    }
+    return loaded;
+  } catch (error) {
+    const message = cloudErrorMessage(error);
+    setCloudStatus(message, "error");
+    showToast(message);
+    return false;
+  } finally {
+    setCloudBusy(false);
   }
 }
 
@@ -748,10 +836,30 @@ async function copyPublicLink() {
   }
 }
 
+async function copyEditLink() {
+  const slug = normalizeCloudSlug(els.cloudSlugInput ? els.cloudSlugInput.value : getCloudConfig().slug);
+  if (!slug) {
+    setCloudStatus("先填写公开编号，再复制协作链接。", "error");
+    return;
+  }
+  const link = getEditLink(slug);
+  try {
+    await copyText(link);
+    setCloudStatus(`协作链接已复制：${link}。别人还需要编辑密码才能改云端数据。`, "ok");
+    showToast("协作链接已复制");
+  } catch {
+    setCloudStatus(`复制失败，可以手动复制：${link}`, "error");
+  }
+}
+
 async function handleCloudSubmit(event) {
   event.preventDefault();
   const slug = normalizeCloudSlug(els.cloudSlugInput.value);
   const pin = els.cloudPinInput.value.trim();
+  if (isSharedEditView()) {
+    await connectSharedEditCloud();
+    return;
+  }
   if (!slug) {
     setCloudStatus("公开编号不能为空，只建议用英文和数字。", "error");
     return;
@@ -1352,6 +1460,7 @@ function wireEvents() {
   els.closeCloudButton.addEventListener("click", closeCloudDialog);
   els.cancelCloudButton.addEventListener("click", closeCloudDialog);
   els.copyPublicLinkButton.addEventListener("click", copyPublicLink);
+  els.copyEditLinkButton.addEventListener("click", copyEditLink);
   els.cloudForm.addEventListener("submit", handleCloudSubmit);
   els.loadCloudButton.addEventListener("click", () => {
     if (window.confirm("会用云端记录覆盖这台设备里的本地错题，确定继续吗？")) {
@@ -1476,6 +1585,13 @@ setupInstallAppButton();
 registerServiceWorker();
 if (isPublicView()) {
   loadPublicView();
+} else if (isSharedEditView()) {
+  const config = getCloudConfig();
+  if (config.slug === EDITOR_VIEW_SLUG && config.pin) {
+    loadCloudToLocal({ silent: false });
+  } else {
+    window.setTimeout(openCloudDialog, 200);
+  }
 } else {
   loadCloudToLocal({ silent: true });
 }

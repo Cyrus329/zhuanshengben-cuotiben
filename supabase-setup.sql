@@ -99,3 +99,89 @@ end;
 $$;
 
 grant execute on function public.save_study_cloud(text, text, jsonb, text, boolean) to anon, authenticated;
+
+create or replace function public.verify_study_cloud_pin(
+  p_slug text,
+  p_pin text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_slug text := lower(trim(p_slug));
+  v_hash text := md5(coalesce(p_pin, ''));
+  v_existing text;
+begin
+  if v_slug !~ '^[a-z0-9][a-z0-9_-]{2,31}$' then
+    raise exception 'invalid slug';
+  end if;
+
+  if length(coalesce(p_pin, '')) < 4 then
+    raise exception 'pin too short';
+  end if;
+
+  select pin_hash into v_existing
+  from public.study_cloud_profiles
+  where slug = v_slug;
+
+  if v_existing is null then
+    raise exception 'cloud profile not found';
+  end if;
+
+  if v_existing <> v_hash then
+    raise exception 'wrong pin';
+  end if;
+
+  return jsonb_build_object('ok', true, 'slug', v_slug);
+end;
+$$;
+
+grant execute on function public.verify_study_cloud_pin(text, text) to anon, authenticated;
+
+create or replace function public.load_study_cloud(
+  p_slug text,
+  p_pin text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_slug text := lower(trim(p_slug));
+  v_hash text := md5(coalesce(p_pin, ''));
+  v_profile public.study_cloud_profiles%rowtype;
+  v_records jsonb;
+begin
+  if v_slug !~ '^[a-z0-9][a-z0-9_-]{2,31}$' then
+    raise exception 'invalid slug';
+  end if;
+
+  select * into v_profile
+  from public.study_cloud_profiles
+  where slug = v_slug;
+
+  if v_profile.slug is null then
+    raise exception 'cloud profile not found';
+  end if;
+
+  if coalesce(p_pin, '') <> '' and v_profile.pin_hash <> v_hash then
+    raise exception 'wrong pin';
+  end if;
+
+  if v_profile.is_public = false and (coalesce(p_pin, '') = '' or v_profile.pin_hash <> v_hash) then
+    raise exception 'wrong pin';
+  end if;
+
+  select coalesce(jsonb_agg(record order by record_id), '[]'::jsonb)
+  into v_records
+  from public.study_cloud_records
+  where slug = v_slug;
+
+  return v_records;
+end;
+$$;
+
+grant execute on function public.load_study_cloud(text, text) to anon, authenticated;
