@@ -1,0 +1,27 @@
+{
+  "name": "专升本错题本",
+  "short_name": "错题本",
+  "description": "专升本高数、计算机、英语错题整理与复习应用。",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f6f7",
+  "theme_color": "#176b6d",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
