@@ -1,6 +1,7 @@
 const STORAGE_KEY = "wrong-question-organizer:v1";
 const CLOUD_CONFIG_KEY = "wrong-question-organizer:cloud-config:v1";
 const SHARE_BASE_URL_KEY = "wrong-question-organizer:share-base-url:v1";
+const CLOUD_REQUEST_TIMEOUT_MS = 15000;
 const SUPABASE_URL = "https://fsizdxkwrxzopkoouipr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_BfWyJfb6c4GrV0JYLXejUg_QnkuhPvw";
 const URL_PARAMS = new URLSearchParams(window.location.search);
@@ -548,6 +549,11 @@ function setCloudBusy(isBusy) {
       button.disabled = isBusy;
     }
   });
+  if (els.cloudSubmitButton) {
+    els.cloudSubmitButton.textContent = isBusy
+      ? (isSharedEditView() ? "正在连接..." : "正在同步...")
+      : (isSharedEditView() ? "连接并加载云端" : "保存并开启同步");
+  }
 }
 
 function getCloudTimeLabel() {
@@ -571,40 +577,59 @@ function cloudErrorMessage(error) {
   if (message.includes("cloud profile not found")) {
     return "还没有这个云端编号。先用自己的错题本保存并开启同步，再分享协作链接。";
   }
-  if (message.includes("Failed to fetch")) {
-    return "网络没有连上，或 Supabase 地址暂时访问不了。";
+  if (message.includes("cloud request timeout") || message.includes("AbortError")) {
+    return "连接云端超时。手机换个网络或刷新页面再试；如果还不行，先确认 GitHub 上已经上传最新版，并且 Supabase SQL 已重新运行。";
+  }
+  if (message.includes("Failed to fetch") || message.includes("Load failed") || message.includes("NetworkError")) {
+    return "网络没有连上，或 Supabase 地址暂时访问不了。手机可以换 Wi-Fi/流量后再试。";
   }
   return message || "云同步失败，请稍后再试。";
 }
 
 async function cloudRequest(path, options = {}) {
-  const response = await fetch(`${SUPABASE_URL}${path}`, {
-    ...options,
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
-  const text = await response.text();
-  if (!response.ok) {
-    let detail = text;
-    try {
-      const parsed = JSON.parse(text);
-      detail = parsed.message || parsed.error_description || parsed.error || text;
-    } catch {
-      // Plain text errors are fine.
-    }
-    throw new Error(detail || `请求失败 ${response.status}`);
-  }
-  if (!text) {
-    return null;
-  }
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutId = controller
+    ? window.setTimeout(() => controller.abort(), CLOUD_REQUEST_TIMEOUT_MS)
+    : null;
   try {
-    return JSON.parse(text);
-  } catch {
-    return text;
+    const response = await fetch(`${SUPABASE_URL}${path}`, {
+      ...options,
+      signal: options.signal || controller?.signal,
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      let detail = text;
+      try {
+        const parsed = JSON.parse(text);
+        detail = parsed.message || parsed.error_description || parsed.error || text;
+      } catch {
+        // Plain text errors are fine.
+      }
+      throw new Error(detail || `请求失败 ${response.status}`);
+    }
+    if (!text) {
+      return null;
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("cloud request timeout");
+    }
+    throw error;
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
   }
 }
 
