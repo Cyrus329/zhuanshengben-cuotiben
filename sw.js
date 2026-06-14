@@ -1,4 +1,4 @@
-const CACHE_NAME = "wrong-question-organizer-169-pwa-v3";
+const CACHE_NAME = "wrong-question-organizer-169-pwa-v4";
 const ASSETS = [
   "./",
   "./index.html",

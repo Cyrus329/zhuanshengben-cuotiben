@@ -602,6 +602,12 @@ textarea:focus {
   border-color: #e8bcc5;
 }
 
+.mastery-progress {
+  color: var(--blue);
+  background: var(--blue-soft);
+  border-color: rgba(49, 90, 159, 0.28);
+}
+
 .record-actions {
   justify-content: flex-end;
   align-content: start;

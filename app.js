@@ -2,6 +2,9 @@ const STORAGE_KEY = "wrong-question-organizer:v1";
 const CLOUD_CONFIG_KEY = "wrong-question-organizer:cloud-config:v1";
 const SHARE_BASE_URL_KEY = "wrong-question-organizer:share-base-url:v1";
 const CLOUD_REQUEST_TIMEOUT_MS = 15000;
+const REVIEW_MASTERY_STREAK_TARGET = 3;
+const INTENSIVE_CORRECT_REVIEW_DAYS = [2, 4];
+const INTENSIVE_WRONG_REVIEW_DAYS = 1;
 const SUPABASE_URL = "https://fsizdxkwrxzopkoouipr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_BfWyJfb6c4GrV0JYLXejUg_QnkuhPvw";
 const URL_PARAMS = new URLSearchParams(window.location.search);
@@ -1204,6 +1207,7 @@ function renderRecords() {
 function recordCardHTML(record) {
   const tags = record.tags.slice(0, 5).map((tag) => `<span class="tag">#${escapeHTML(tag)}</span>`).join("");
   const due = isDue(record) ? `<span class="status-pill due-badge">待复习</span>` : "";
+  const correctStreakBadge = getCorrectStreakBadge(record);
   const thumbs = record.images.slice(0, 4).map((src) => `<img src="${src}" alt="题图缩略图">`).join("");
   const reviewCount = record.reviews.length;
   const lastReview = reviewCount ? record.reviews[reviewCount - 1].date : "未复习";
@@ -1237,6 +1241,7 @@ function recordCardHTML(record) {
             <h3>${escapeHTML(record.title)}</h3>
             <span class="status-pill status-${record.status}">${statusLabel(record.status)}</span>
             ${due}
+            ${correctStreakBadge}
           </div>
           <div class="record-meta">
             ${escapeHTML(record.subject)} · ${escapeHTML(record.chapter || "未填知识点")} · ${escapeHTML(record.source || "未填来源")}
@@ -1370,18 +1375,102 @@ function deleteCurrentRecord() {
   showToast("已删除");
 }
 
+function countRecentCorrectStreak(reviews = []) {
+  let streak = 0;
+  for (let index = reviews.length - 1; index >= 0; index -= 1) {
+    const result = reviews[index]?.result;
+    if (result === "correct") {
+      streak += 1;
+      continue;
+    }
+    break;
+  }
+  return streak;
+}
+
+function getIntensiveReviewSchedule(record, result, baseDate = todayISO()) {
+  if (result === "mastered") {
+    return {
+      status: "mastered",
+      nextReview: "",
+      correctStreak: REVIEW_MASTERY_STREAK_TARGET,
+      label: "已掌握",
+    };
+  }
+
+  if (result === "wrong") {
+    return {
+      status: "wrong",
+      nextReview: addDaysISO(baseDate, INTENSIVE_WRONG_REVIEW_DAYS),
+      correctStreak: 0,
+      label: "做错了，明天复习",
+    };
+  }
+
+  const correctStreak = countRecentCorrectStreak(record?.reviews || []);
+  if (correctStreak >= REVIEW_MASTERY_STREAK_TARGET) {
+    return {
+      status: "mastered",
+      nextReview: "",
+      correctStreak,
+      label: `连续做对 ${REVIEW_MASTERY_STREAK_TARGET}/${REVIEW_MASTERY_STREAK_TARGET}，自动掌握`,
+    };
+  }
+
+  const intervalIndex = Math.max(0, Math.min(correctStreak - 1, INTENSIVE_CORRECT_REVIEW_DAYS.length - 1));
+  const days = INTENSIVE_CORRECT_REVIEW_DAYS[intervalIndex];
+  return {
+    status: "correct",
+    nextReview: addDaysISO(baseDate, days),
+    correctStreak,
+    label: `连续做对 ${correctStreak}/${REVIEW_MASTERY_STREAK_TARGET}，${days} 天后复习`,
+  };
+}
+
+function previewIntensiveReviewSchedule(record, result, baseDate = todayISO()) {
+  const previewRecord = {
+    ...record,
+    reviews: [
+      ...(record?.reviews || []),
+      { date: baseDate, result },
+    ],
+  };
+  return getIntensiveReviewSchedule(previewRecord, result, baseDate);
+}
+
+function getCorrectStreakBadge(record) {
+  if (record.status === "mastered") {
+    return `<span class="status-pill mastery-progress">连续做对 ${REVIEW_MASTERY_STREAK_TARGET}/${REVIEW_MASTERY_STREAK_TARGET}</span>`;
+  }
+  const correctStreak = countRecentCorrectStreak(record.reviews);
+  if (!correctStreak) {
+    return "";
+  }
+  return `<span class="status-pill mastery-progress">连续做对 ${Math.min(correctStreak, REVIEW_MASTERY_STREAK_TARGET)}/${REVIEW_MASTERY_STREAK_TARGET}</span>`;
+}
+
+function updateReviewSchedulePreview() {
+  const record = state.records.find((item) => item.id === reviewFields.id.value);
+  if (!record) {
+    return;
+  }
+  const result = reviewFields.result.value;
+  const reviewDate = reviewFields.date.value || todayISO();
+  const schedule = previewIntensiveReviewSchedule(record, result, reviewDate);
+  reviewFields.nextDate.value = schedule.nextReview;
+  reviewFields.status.value = schedule.status;
+}
+
 function openReview(id) {
   const record = state.records.find((item) => item.id === id);
   if (!record) {
     return;
   }
-  const nextDate = record.status === "mastered" ? "" : addDaysISO(todayISO(), record.reviews.length >= 2 ? 14 : 7);
   els.reviewTitle.textContent = record.title;
   reviewFields.id.value = record.id;
   reviewFields.date.value = todayISO();
   reviewFields.result.value = "correct";
-  reviewFields.nextDate.value = nextDate;
-  reviewFields.status.value = record.reviews.length >= 2 ? "mastered" : "correct";
+  updateReviewSchedulePreview();
   reviewFields.note.value = "";
   els.reviewDialog.showModal();
 }
@@ -1402,15 +1491,14 @@ function saveReview(event) {
     note: normalizeText(reviewFields.note.value),
   };
   record.reviews.push(entry);
-  record.status = reviewFields.result.value === "wrong" ? "wrong" : normalizedStatus(reviewFields.status.value);
-  record.nextReview = reviewFields.result.value === "wrong"
-    ? (reviewFields.nextDate.value || addDaysISO(entry.date, 2))
-    : reviewFields.nextDate.value;
+  const schedule = getIntensiveReviewSchedule(record, entry.result, entry.date);
+  record.status = schedule.status;
+  record.nextReview = schedule.nextReview;
   record.updatedAt = new Date().toISOString();
   saveRecords();
   closeReview();
   render();
-  showToast("复习已记录");
+  showToast(schedule.status === "mastered" ? "连续做对 3 次，已自动掌握" : `复习已记录：${schedule.label}`);
 }
 
 function markAttempt(recordId, result) {
@@ -1429,22 +1517,19 @@ function markAttempt(recordId, result) {
         : "题卡快捷记录：已掌握",
   };
   record.reviews.push(entry);
-  if (result === "wrong") {
-    record.status = "wrong";
-    record.nextReview = addDaysISO(today, 2);
-  } else if (result === "correct") {
-    record.status = "correct";
-    record.nextReview = addDaysISO(today, record.reviews.length >= 2 ? 14 : 7);
-  } else if (result === "mastered") {
-    record.status = "mastered";
-    record.nextReview = "";
-  }
+  const schedule = getIntensiveReviewSchedule(record, result, today);
+  record.status = schedule.status;
+  record.nextReview = schedule.nextReview;
   record.updatedAt = new Date().toISOString();
   if (!saveRecords()) {
     return;
   }
   render();
-  showToast(result === "correct" ? "已标记：做对了" : result === "wrong" ? "已标记：做错了" : "已放入：已掌握");
+  showToast(schedule.status === "mastered"
+    ? "连续做对 3 次，已自动掌握"
+    : result === "wrong"
+      ? "已标记：做错了，明天复习"
+      : `已标记：${schedule.label}`);
 }
 
 function renderImagePreview() {
@@ -1600,6 +1685,8 @@ function wireEvents() {
   els.closeReviewButton.addEventListener("click", closeReview);
   els.cancelReviewButton.addEventListener("click", closeReview);
   els.reviewForm.addEventListener("submit", saveReview);
+  reviewFields.result.addEventListener("change", updateReviewSchedulePreview);
+  reviewFields.date.addEventListener("change", updateReviewSchedulePreview);
 
   els.searchInput.addEventListener("input", (event) => {
     state.filters.query = event.target.value.trim();
