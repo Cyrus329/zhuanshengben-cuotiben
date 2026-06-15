@@ -1,9 +1,9 @@
-const CACHE_NAME = "wrong-question-organizer-image-audit-pwa-v6";
+const CACHE_NAME = "wrong-question-organizer-image-audit-pwa-v7";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
+  "./styles.css?v=20260615-images-2",
+  "./app.js?v=20260615-images-2",
   "./manifest.webmanifest",
   "./question-image-audit.json",
   "./question-image-match-report.json",
@@ -36,6 +36,8 @@ self.addEventListener("activate", (event) => {
         .filter((key) => key !== CACHE_NAME)
         .map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: "window" }))
+      .then((clients) => Promise.all(clients.map((client) => client.navigate(client.url))))
   );
 });
 
