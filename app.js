@@ -1338,7 +1338,13 @@ function recordImageGalleryHTML(record) {
       data-image-src="${escapeHTML(src)}"
       aria-label="查看 ${escapeHTML(record.id)} 原题图片 ${index + 1}"
     >
-      <img src="${escapeHTML(src)}" alt="${escapeHTML(record.id)} 原题图片 ${index + 1}" loading="lazy">
+      <img
+        src="${escapeHTML(src)}"
+        data-original-src="${escapeHTML(src)}"
+        data-image-attempt="0"
+        alt="${escapeHTML(record.id)} 原题图片 ${index + 1}"
+        loading="lazy"
+      >
     </button>
   `).join("");
   return `
@@ -1350,6 +1356,76 @@ function recordImageGalleryHTML(record) {
       <div class="question-image-grid">${items}</div>
     </section>
   `;
+}
+
+function getImageSourceCandidates(source) {
+  const original = normalizeText(source);
+  if (!original) {
+    return [];
+  }
+  if (/^(?:data|blob|file):/i.test(original)) {
+    return [original];
+  }
+
+  const candidates = [original];
+  let fileName = "";
+  try {
+    const parsed = new URL(original, document.baseURI);
+    fileName = decodeURIComponent(parsed.pathname.split("/").pop() || "");
+  } catch {
+    fileName = original.split(/[\\/]/).pop() || "";
+  }
+  if (fileName) {
+    candidates.push(new URL(`question-images/${fileName}`, document.baseURI).href);
+    candidates.push(new URL(fileName, document.baseURI).href);
+  }
+
+  const seen = new Set();
+  return candidates.filter((candidate) => {
+    let key = candidate;
+    try {
+      key = new URL(candidate, document.baseURI).href;
+    } catch {
+      // Keep the original value when it cannot be parsed as a URL.
+    }
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function markQuestionImageUnavailable(image) {
+  const source = image.dataset.originalSrc || image.getAttribute("src") || "";
+  const button = image.closest(".question-image-button");
+  if (!button) {
+    return;
+  }
+  const isExpiredLocalImage = /^(?:blob|file):/i.test(source);
+  button.classList.add("is-unavailable");
+  button.disabled = true;
+  button.removeAttribute("data-action");
+  button.innerHTML = `
+    <span class="question-image-error">
+      <strong>${isExpiredLocalImage ? "旧存档中的本地图片已失效" : "原题图片文件还没有上传到网页"}</strong>
+      <span>${isExpiredLocalImage
+        ? "这类地址只能在原设备临时使用，请重新选择图片后保存。"
+        : "请把 question-images 文件夹一起上传到 GitHub 仓库。"}</span>
+    </span>
+  `;
+}
+
+function recoverQuestionImage(image) {
+  const original = image.dataset.originalSrc || image.getAttribute("src") || "";
+  const candidates = getImageSourceCandidates(original);
+  const nextAttempt = Number(image.dataset.imageAttempt || 0) + 1;
+  if (nextAttempt >= candidates.length) {
+    markQuestionImageUnavailable(image);
+    return;
+  }
+  image.dataset.imageAttempt = String(nextAttempt);
+  image.src = candidates[nextAttempt];
 }
 
 function recordCardHTML(record) {
@@ -1920,6 +1996,19 @@ function wireEvents() {
       openReview(card.dataset.id);
     }
   });
+  els.recordsList.addEventListener("error", (event) => {
+    const image = event.target.closest?.(".question-image-button img");
+    if (image) {
+      recoverQuestionImage(image);
+    }
+  }, true);
+  els.recordsList.addEventListener("load", (event) => {
+    const image = event.target.closest?.(".question-image-button img");
+    const button = image?.closest(".question-image-button");
+    if (image && button) {
+      button.dataset.imageSrc = image.currentSrc || image.src;
+    }
+  }, true);
 
   els.reviewQueue.addEventListener("click", (event) => {
     if (isPublicView()) {

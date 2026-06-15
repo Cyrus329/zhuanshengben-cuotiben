@@ -474,6 +474,32 @@ textarea:focus {
   background: #f7f8f6;
 }
 
+.question-image-button.is-unavailable {
+  cursor: default;
+  border-style: dashed;
+  background: #fff8ed;
+}
+
+.question-image-error {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  min-height: 220px;
+  padding: 24px;
+  color: #704617;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.question-image-error strong {
+  font-size: 17px;
+}
+
+.question-image-error span {
+  color: #7c6954;
+  font-size: 14px;
+}
+
 .image-match-note {
   margin-bottom: 14px;
   padding: 12px 14px;
