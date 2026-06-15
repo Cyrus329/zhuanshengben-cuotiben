@@ -304,6 +304,18 @@
     </form>
   </dialog>
 
+  <dialog class="image-viewer-dialog" id="imageViewerDialog">
+    <div class="image-viewer-shell">
+      <div class="image-viewer-header">
+        <h2 id="imageViewerTitle">原题图片</h2>
+        <button class="icon-button" id="closeImageViewerButton" type="button" aria-label="关闭大图">×</button>
+      </div>
+      <div class="image-viewer-stage">
+        <img id="imageViewerImage" alt="原题大图">
+      </div>
+    </div>
+  </dialog>
+
   <input id="importInput" type="file" accept="application/json,.json" hidden>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./app.js"></script>

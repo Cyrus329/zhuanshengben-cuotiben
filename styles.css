@@ -424,6 +424,66 @@ textarea:focus {
   border-color: #c9d6f3;
 }
 
+.question-image-gallery {
+  margin-bottom: 14px;
+}
+
+.question-image-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+
+.question-image-heading span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.question-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 10px;
+}
+
+.question-image-button {
+  display: block;
+  width: 100%;
+  min-height: 180px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #cbd3cf;
+  border-radius: 6px;
+  background: #f2f4f1;
+  cursor: zoom-in;
+}
+
+.question-image-button:hover,
+.question-image-button:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(22, 117, 113, 0.15);
+}
+
+.question-image-button img {
+  display: block;
+  width: 100%;
+  height: clamp(220px, 42vw, 520px);
+  object-fit: contain;
+  background: #f7f8f6;
+}
+
+.image-match-note {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px dashed #c9934e;
+  border-radius: 6px;
+  color: #704617;
+  background: #fff8ed;
+  line-height: 1.6;
+}
+
 .reason-block {
   background: var(--rose-soft);
   border-color: #e8bcc5;
@@ -646,6 +706,67 @@ textarea:focus {
   border: 1px solid var(--line);
   object-fit: cover;
   background: var(--soft);
+}
+
+.image-viewer-dialog {
+  width: min(1120px, calc(100vw - 24px));
+  max-width: none;
+  height: min(92vh, 900px);
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: #161a19;
+}
+
+.image-viewer-dialog::backdrop {
+  background: rgba(12, 17, 15, 0.78);
+}
+
+.image-viewer-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+}
+
+.image-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  color: white;
+  background: #202725;
+}
+
+.image-viewer-header h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-viewer-header .icon-button {
+  color: white;
+  border-color: #6d7773;
+  background: transparent;
+}
+
+.image-viewer-stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.image-viewer-stage img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .review-board {

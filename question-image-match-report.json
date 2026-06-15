@@ -1,0 +1,509 @@
+{
+  "generatedAt": "2026-06-15",
+  "recordCount": 103,
+  "matchedRecordCount": 88,
+  "unmatchedRecordCount": 15,
+  "assignedUniqueImageCount": 80,
+  "unassignedImageCount": 37,
+  "unmatchedRecords": [
+    {
+      "id": "M-001-22",
+      "title": "M-001-22 左右极限",
+      "question": "判断 lim(x→0)|x|/x 是否存在",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-001-23",
+      "title": "M-001-23 无穷大量",
+      "question": "判断 lim(x→0)1/x² 是否存在",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-001-24",
+      "title": "M-001-24 重要极限",
+      "question": "求 lim(x→0) sin5x/sin2x",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-001-25",
+      "title": "M-001-25 等价无穷小",
+      "question": "求 lim(x→0)(1-cosx)/x²",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-001-26",
+      "title": "M-001-26 数列极限",
+      "question": "求 lim(n→∞)(7n+1)/(3n-2)",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-001-27",
+      "title": "M-001-27 等价无穷小",
+      "question": "求 lim(x→0)tan3x/sin4x",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-001-28",
+      "title": "M-001-28 第二重要极限",
+      "question": "求 lim(x→∞)(1-2/x)^x",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-001-29",
+      "title": "M-001-29 指数极限",
+      "question": "求 lim(n→∞)(5^(n+2)-2^n)/(7^n+5^n)",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-004-01",
+      "title": "M-004-01 商求导+根式",
+      "question": "求函数 y=x/(1+√x) 的导数",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-004-02",
+      "title": "M-004-02 复合求导",
+      "question": "求含根式、分式、指数式的函数导数",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-004-03",
+      "title": "M-004-03 反函数导数",
+      "question": "已知反函数φ(x)，求φ’(a)",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-004-05",
+      "title": "M-004-05 参数求导",
+      "question": "参数方程求dy/dx",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-004-07",
+      "title": "M-004-07 参数切线",
+      "question": "参数方程已知x值求切线方程",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-004-08",
+      "title": "M-004-08 过定点切线",
+      "question": "曲线过某点的切线方程",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    },
+    {
+      "id": "M-004-09",
+      "title": "M-004-09 相切",
+      "question": "两曲线相切求参数",
+      "reason": "在现有原图中尚未找到可确认的同题题面"
+    }
+  ],
+  "unassignedImages": [
+    {
+      "sourceKey": "source-02",
+      "sourceDocument": "d44dfce4-4991-46a7-b358-1ef48cdd0e67.docx",
+      "localSourceDocument": "02.docx",
+      "originalName": "image20.png",
+      "sha256": "e76afef15db37e345c9d1469dfd35a67d154845fd55001a1d6f204bd19143a9d",
+      "width": 1734,
+      "height": 1067,
+      "format": "PNG",
+      "outputPath": "question-images/source-02-020.png"
+    },
+    {
+      "sourceKey": "source-02",
+      "sourceDocument": "d44dfce4-4991-46a7-b358-1ef48cdd0e67.docx",
+      "localSourceDocument": "02.docx",
+      "originalName": "image22.png",
+      "sha256": "c0d2a0a28c0495357483ff7bf07648fbcfdacccec24b1b6f3a665428faf9e27d",
+      "width": 1949,
+      "height": 1053,
+      "format": "PNG",
+      "outputPath": "question-images/source-02-022.png"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image8.jpeg",
+      "sha256": "32a1720f19872567ee212c2b93b475c2cf005eb6561ed4ede4d126115a80b89d",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-008.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image9.jpeg",
+      "sha256": "3d750b5fde0fc8df1a7b9b7259513d254a9084c8e897f78cd0592a290b9b3d44",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-009.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image10.jpeg",
+      "sha256": "13471b59d8b9ceedaa0ee81b8a6ec1f6ce4e00f012b079f53d4cf735f2de36f6",
+      "width": 960,
+      "height": 1280,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-010.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image11.jpeg",
+      "sha256": "d36c0dc76771f659c05ce932077b3a6eaf3448abca34380fdce715cd915b12c5",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-011.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image16.png",
+      "sha256": "19c473cc28d0d3996667ea44c0eefd47ddd9e0bbd37551dc42cb53d23dca2cfd",
+      "width": 972,
+      "height": 551,
+      "format": "PNG",
+      "outputPath": "question-images/source-04-016.png"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image17.png",
+      "sha256": "f74edbb389e0123777b954fe7c3a6127acbcb166b7cac7818660246d368abe3b",
+      "width": 972,
+      "height": 583,
+      "format": "PNG",
+      "outputPath": "question-images/source-04-017.png"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image18.png",
+      "sha256": "806e8528d0f0066aad26e5d63ddd6ede69dc65b31fb07ec40bef949c3d1d4d38",
+      "width": 972,
+      "height": 504,
+      "format": "PNG",
+      "outputPath": "question-images/source-04-018.png"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image19.jpeg",
+      "sha256": "06b88c96b0cea40dca5f35dc306fbe5884e00f85de486ae7cc824dce0f3aebf2",
+      "width": 960,
+      "height": 1280,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-019.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image20.jpeg",
+      "sha256": "bd0d3b85110d75bf6a382573834b28a964ab18d8623cd7dfc6dd63fe9c363fa1",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-020.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image21.jpeg",
+      "sha256": "40bb723218a40ef6c7f65e1c9afec27f8a36a1c9bf8ee85ab57890ed6bee56ee",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-021.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image23.jpeg",
+      "sha256": "17f1932e5a3febced030e5375270b00d00c4c85bbdb3d28922577d6527d25579",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-023.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image25.jpeg",
+      "sha256": "132e619558f571c9fe0c4d2b006186c18bfbb4d9dd0e73bd29108682ee91537d",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-025.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image26.jpeg",
+      "sha256": "1440f312ec89beb8432ec73c0ae716c04d0de8140e06ae0ec1a555e6cfed3582",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-026.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image27.jpeg",
+      "sha256": "caa9523ce2bfd2ffe3a16df949feab79c1c85079f78d777594c65c69bd93e155",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-027.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image28.jpeg",
+      "sha256": "df58267ffe1544227c88ee871eca5d663f4f360f1658c60e7e76c4ccfcd49f35",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-028.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image29.jpeg",
+      "sha256": "038faaf1a16d8191020beab45a9b3623639a2ee336c18d5488b3999cd22c3571",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-029.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image30.jpeg",
+      "sha256": "c748b733105a6f408889602550d24dfcd04076f4676b4b959f16e120ba6942dd",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-030.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image31.jpeg",
+      "sha256": "0bf8166b00af182cfcefb20935735fa4ac1831f2f042ce03c0ec2dd711ca9daa",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-031.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image32.jpeg",
+      "sha256": "e795b5ccef209e538b3faa4ba8719953c67ff9f64221b752a7145694b30cfb77",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-032.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image33.jpeg",
+      "sha256": "bbec6804b10d4d2c902a93286bb00817080f424b742fff65ba506af035f497ea",
+      "width": 960,
+      "height": 1280,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-033.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image34.jpeg",
+      "sha256": "a502a20f6379a96a7fac469f6ff1f25947ee5af5f4f570f57ca4a5f5ed0bff54",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-034.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image35.jpeg",
+      "sha256": "d690fc02cd464c0235954a4928c41918ce54d6cdffcedce46d48fb13cc93414d",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-035.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image36.jpeg",
+      "sha256": "15932f27308686b7fd748a21a0af496bf6496f4f7bfaa50d05d50e3848d57901",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-036.jpeg"
+    },
+    {
+      "sourceKey": "source-04",
+      "sourceDocument": "bd9be6e9-3204-4bc5-aed3-aa53bf19f461.docx",
+      "localSourceDocument": "04.docx",
+      "originalName": "image37.jpeg",
+      "sha256": "c81557121155e9f9841c6a762ba139c2c78de0b87e08b552f519fd9f3f17c734",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-04-037.jpeg"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image1.jpeg",
+      "sha256": "00bd19a0ddec5bd5143f6ec94fcb515c323588ce52ba8d2f1a637f96049968b4",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-05-001.jpeg"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image2.jpeg",
+      "sha256": "824f85141103fd31fb878713938e7833b1b8ea72674fc2369b81c0f12f16bab5",
+      "width": 960,
+      "height": 1280,
+      "format": "JPEG",
+      "outputPath": "question-images/source-05-002.jpeg"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image3.jpeg",
+      "sha256": "2bde8f798a616bd63d972d3b01e792f8382e2a32b75ce79618337aab28ccfe62",
+      "width": 960,
+      "height": 1280,
+      "format": "JPEG",
+      "outputPath": "question-images/source-05-003.jpeg"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image4.jpeg",
+      "sha256": "c668af3d9fb73ea2bf7c055e7d2ce29317c0bc0a13a5a220d35d58267e85479a",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-05-004.jpeg"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image5.jpeg",
+      "sha256": "4f8c424ea934ff8a2e11ff2c38845e58f8e6c3893d8e6b2959eb9ae00154e4a1",
+      "width": 960,
+      "height": 1280,
+      "format": "JPEG",
+      "outputPath": "question-images/source-05-005.jpeg"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image6.jpeg",
+      "sha256": "b7bf84c3a72bddf9cd403db5a65f3d838aeaee19e03d54ff6d7d864dceb77a52",
+      "width": 974,
+      "height": 1299,
+      "format": "JPEG",
+      "outputPath": "question-images/source-05-006.jpeg"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image10.png",
+      "sha256": "af6e205136641d3f3c8e9e9d8a0d9b0df79a4fee921798e1b4e56fa0e0c6f0aa",
+      "width": 971,
+      "height": 235,
+      "format": "PNG",
+      "outputPath": "question-images/source-05-010.png"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image11.png",
+      "sha256": "49f138a13c27f1555103262823e2f177e70c282a74632ab8f70e5042999a49a9",
+      "width": 971,
+      "height": 608,
+      "format": "PNG",
+      "outputPath": "question-images/source-05-011.png"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image12.png",
+      "sha256": "b3e1b5ac235d28db62a384cf9f1cd5e24158fbbe0c4d32ce9d57be53cf4639ca",
+      "width": 972,
+      "height": 399,
+      "format": "PNG",
+      "outputPath": "question-images/source-05-012.png"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image13.png",
+      "sha256": "c896ba1eb94be59d525fc796d6cb5c18d1c8b24537b13f230242ef37ca3e6571",
+      "width": 972,
+      "height": 537,
+      "format": "PNG",
+      "outputPath": "question-images/source-05-013.png"
+    },
+    {
+      "sourceKey": "source-05",
+      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
+      "localSourceDocument": "05.docx",
+      "originalName": "image20.png",
+      "sha256": "8622e025d5e7387c053ae40be425112acd771f8420820d781860007b7cd42c8d",
+      "width": 971,
+      "height": 538,
+      "format": "PNG",
+      "outputPath": "question-images/source-05-020.png"
+    }
+  ]
+}

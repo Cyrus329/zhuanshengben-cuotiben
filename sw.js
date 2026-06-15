@@ -1,10 +1,12 @@
-const CACHE_NAME = "wrong-question-organizer-169-pwa-v5";
+const CACHE_NAME = "wrong-question-organizer-image-audit-pwa-v6";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
+  "./question-image-audit.json",
+  "./question-image-match-report.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./专升本高数错题导入_M001-M004_169题完整重整版.json"
@@ -13,7 +15,16 @@ const ASSETS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(ASSETS))
+      .then(async (cache) => {
+        await cache.addAll(ASSETS);
+        try {
+          const response = await fetch("./question-image-audit.json");
+          const audit = await response.json();
+          await cache.addAll((audit.images || []).map((image) => `./${image.outputPath}`));
+        } catch {
+          // The app shell still installs if optional source images cannot be prefetched.
+        }
+      })
       .then(() => self.skipWaiting())
   );
 });
@@ -38,12 +49,20 @@ self.addEventListener("fetch", (event) => {
       if (cached) {
         return cached;
       }
-      return fetch(event.request).catch(() => {
-        if (event.request.mode === "navigate") {
-          return caches.match("./index.html");
-        }
-        return undefined;
-      });
+      return fetch(event.request)
+        .then((response) => {
+          if (response.ok && new URL(event.request.url).origin === self.location.origin) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => {
+          if (event.request.mode === "navigate") {
+            return caches.match("./index.html");
+          }
+          return undefined;
+        });
     })
   );
 });
