@@ -1,9 +1,9 @@
-const CACHE_NAME = "wrong-question-organizer-image-audit-pwa-v8";
+const CACHE_NAME = "wrong-question-organizer-image-audit-pwa-v9";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260615-images-3",
-  "./app.js?v=20260615-images-3",
+  "./styles.css?v=20260616-image-bundle-1",
+  "./app.js?v=20260616-image-bundle-1",
   "./manifest.webmanifest",
   "./question-image-audit.json",
   "./question-image-match-report.json",

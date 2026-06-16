@@ -5,6 +5,12 @@ const CLOUD_REQUEST_TIMEOUT_MS = 15000;
 const REVIEW_MASTERY_STREAK_TARGET = 3;
 const INTENSIVE_CORRECT_REVIEW_DAYS = [2, 4];
 const INTENSIVE_WRONG_REVIEW_DAYS = 1;
+const QUESTION_IMAGE_BUNDLE_FILES = [
+  "question-image-bundle-1.js",
+  "question-image-bundle-2.js",
+  "question-image-bundle-3.js",
+  "question-image-bundle-4.js",
+];
 const SUPABASE_URL = "https://fsizdxkwrxzopkoouipr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_BfWyJfb6c4GrV0JYLXejUg_QnkuhPvw";
 const URL_PARAMS = new URLSearchParams(window.location.search);
@@ -32,6 +38,7 @@ const BUILTIN_RECORDS = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob
 let shouldPersistLoadedRecords = false;
 let suppressCloudSync = false;
 let cloudSyncTimer = null;
+const questionImageBundlePromises = new Map();
 
 const els = {
   recordsList: document.querySelector("#recordsList"),
@@ -1368,13 +1375,7 @@ function getImageSourceCandidates(source) {
   }
 
   const candidates = [original];
-  let fileName = "";
-  try {
-    const parsed = new URL(original, document.baseURI);
-    fileName = decodeURIComponent(parsed.pathname.split("/").pop() || "");
-  } catch {
-    fileName = original.split(/[\\/]/).pop() || "";
-  }
+  const fileName = getImageFileName(original);
   if (fileName) {
     candidates.push(new URL(`question-images/${fileName}`, document.baseURI).href);
     candidates.push(new URL(fileName, document.baseURI).href);
@@ -1396,6 +1397,72 @@ function getImageSourceCandidates(source) {
   });
 }
 
+function getImageFileName(source) {
+  const original = normalizeText(source);
+  if (!original || /^(?:data|blob|file):/i.test(original)) {
+    return "";
+  }
+  try {
+    const parsed = new URL(original, document.baseURI);
+    return decodeURIComponent(parsed.pathname.split("/").pop() || "");
+  } catch {
+    return decodeURIComponent(original.split(/[\\/]/).pop() || "");
+  }
+}
+
+function loadQuestionImageBundle(bundleFile) {
+  if (questionImageBundlePromises.has(bundleFile)) {
+    return questionImageBundlePromises.get(bundleFile);
+  }
+  const promise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = new URL(bundleFile, document.baseURI).href;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`missing image bundle: ${bundleFile}`));
+    document.head.append(script);
+  });
+  questionImageBundlePromises.set(bundleFile, promise);
+  return promise;
+}
+
+function getBundledQuestionImage(source) {
+  const fileName = getImageFileName(source);
+  if (!fileName) {
+    return "";
+  }
+  return window.QUESTION_IMAGE_DATA?.[fileName] || "";
+}
+
+async function recoverQuestionImageFromBundle(image) {
+  const original = image.dataset.originalSrc || image.getAttribute("src") || "";
+  if (image.dataset.bundleAttempted === "1") {
+    markQuestionImageUnavailable(image);
+    return;
+  }
+  image.dataset.bundleAttempted = "1";
+
+  let bundledSource = getBundledQuestionImage(original);
+  for (const bundleFile of QUESTION_IMAGE_BUNDLE_FILES) {
+    if (bundledSource) {
+      break;
+    }
+    try {
+      await loadQuestionImageBundle(bundleFile);
+      bundledSource = getBundledQuestionImage(original);
+    } catch {
+      // Keep trying the next bundle; users may upload only some files while fixing GitHub Pages.
+    }
+  }
+
+  if (!bundledSource) {
+    markQuestionImageUnavailable(image);
+    return;
+  }
+  image.dataset.imageAttempt = "0";
+  image.src = bundledSource;
+}
+
 function markQuestionImageUnavailable(image) {
   const source = image.dataset.originalSrc || image.getAttribute("src") || "";
   const button = image.closest(".question-image-button");
@@ -1411,7 +1478,7 @@ function markQuestionImageUnavailable(image) {
       <strong>${isExpiredLocalImage ? "旧存档中的本地图片已失效" : "原题图片文件还没有上传到网页"}</strong>
       <span>${isExpiredLocalImage
         ? "这类地址只能在原设备临时使用，请重新选择图片后保存。"
-        : "请把 question-images 文件夹一起上传到 GitHub 仓库。"}</span>
+        : "请把 question-images 文件夹或 question-image-bundle 文件一起上传到 GitHub 仓库。"}</span>
     </span>
   `;
 }
@@ -1421,7 +1488,7 @@ function recoverQuestionImage(image) {
   const candidates = getImageSourceCandidates(original);
   const nextAttempt = Number(image.dataset.imageAttempt || 0) + 1;
   if (nextAttempt >= candidates.length) {
-    markQuestionImageUnavailable(image);
+    recoverQuestionImageFromBundle(image);
     return;
   }
   image.dataset.imageAttempt = String(nextAttempt);
