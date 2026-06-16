@@ -1,12 +1,23 @@
-const CACHE_NAME = "wrong-question-organizer-m005-docx-v6";
+const CACHE_NAME = "wrong-question-organizer-m005-nofolder-v7";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260616-m005-docx-6",
-  "./app.js?v=20260616-m005-docx-6",
+  "./styles.css?v=20260616-m005-nofolder-7",
+  "./app.js?v=20260616-m005-nofolder-7",
   "./manifest.webmanifest",
   "./question-image-audit.json",
   "./question-image-match-report.json",
+  "./question-image-bundle-1.js",
+  "./question-image-bundle-2.js",
+  "./question-image-bundle-3.js",
+  "./question-image-bundle-4.js",
+  "./question-image-bundle-5.js",
+  "./question-image-bundle-6.js",
+  "./question-image-bundle-7.js",
+  "./question-image-bundle-8.js",
+  "./question-image-bundle-9.js",
+  "./question-image-bundle-10.js",
+  "./question-image-bundle-11.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./专升本高数错题导入_M001-M004_169题完整重整版.json",
@@ -18,7 +29,8 @@ const ASSETS = [
   "./M系列核对报告.json",
   "./M005_新上传Word错题_逐题拆分.json",
   "./M005_新上传Word错题_逐题拆分报告.md",
-  "./M005_新上传Word错题_逐题拆分报告.json"
+  "./M005_新上传Word错题_逐题拆分报告.json",
+  "./M005_免图片文件夹版说明.md"
 ];
 
 self.addEventListener("install", (event) => {
