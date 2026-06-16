@@ -1,0 +1,65 @@
+# M005 新上传 Word 错题逐题拆分导入报告
+
+- 导入日期：2026-06-16
+- 来源文件：3 个 Word 文档
+- 原始题图：45 张
+- 逐题拆分后新增错题：53 条
+- 编号范围：M-005-01 至 M-005-53
+- 说明：上一版按“每张图一条”整理，所以只有 45 条；本版改为“每个可见小题一条错题卡”。
+- 为避免题干再次抄错，精确题面仍以配图为准，文字区写考点摘要、错因、解析与二刷步骤。
+
+## 新增记录清单
+
+- M-005-01：M-005-01 对数根式函数求导；图片：question-images/source-06-001.png
+- M-005-02：M-005-02 复合函数高阶导数；图片：question-images/source-06-002.png
+- M-005-03：M-005-03 三角函数高阶导数循环；图片：question-images/source-06-003.png
+- M-005-04：M-005-04 对数复合函数微分；图片：question-images/source-06-004.png
+- M-005-05：M-005-05 反三角函数与根式微分；图片：question-images/source-06-005.png
+- M-005-06：M-005-06 隐函数微分法；图片：question-images/source-06-006.png
+- M-005-07：M-005-07 xarctanx 凹凸性判断；图片：question-images/source-06-007.png
+- M-005-08：M-005-08 分式函数单调极值；图片：question-images/source-06-008.png
+- M-005-09：M-005-09 三次函数拐点参数；图片：question-images/source-06-009.png
+- M-005-10：M-005-10 三次函数切线参数；图片：question-images/source-06-010.png
+- M-005-11：M-005-11 一次分式函数渐近线；图片：question-images/source-06-011.png
+- M-005-12：M-005-12 有理函数渐近线；图片：question-images/source-06-012.png
+- M-005-13：M-005-13 二次比一次有理函数渐近线；图片：question-images/source-06-013.png
+- M-005-14：M-005-14 x/(x²+1) 图像综合；图片：question-images/source-06-014.png
+- M-005-15：M-005-15 单调凹凸极值综合表；图片：question-images/source-06-015.png
+- M-005-16：M-005-16 函数草图对应题；图片：question-images/source-06-016.png
+- M-005-17：M-005-17 参数方程 dy/dx；图片：question-images/source-07-001.jpeg
+- M-005-18：M-005-18 椭圆参数方程切线；图片：question-images/source-07-002.jpeg
+- M-005-19：M-005-19 二阶导数：y=√(x√x)；图片：question-images/source-07-003.jpeg
+- M-005-20：M-005-20 二阶导数：根式乘积；图片：question-images/source-07-003.jpeg
+- M-005-21：M-005-21 二阶导数：e^xlnx；图片：question-images/source-07-003.jpeg
+- M-005-22：M-005-22 二阶导数：x/√(1-x²)；图片：question-images/source-07-003.jpeg
+- M-005-23：M-005-23 导数：cot(x/2)；图片：question-images/source-07-004.jpeg
+- M-005-24：M-005-24 导数：xarcsinx；图片：question-images/source-07-004.jpeg
+- M-005-25：M-005-25 微分：幂函数组合；图片：question-images/source-07-004.jpeg
+- M-005-26：M-005-26 微分：xsinxlnx 初见；图片：question-images/source-07-004.jpeg
+- M-005-27：M-005-27 微分：xsinxlnx 订正；图片：question-images/source-07-005.jpeg
+- M-005-28：M-005-28 导数：e^{-x}cos(3-x)；图片：question-images/source-07-006.jpeg
+- M-005-29：M-005-29 洛必达极限：arctanx-x；图片：question-images/source-07-006.jpeg
+- M-005-30：M-005-30 导数：ln(1+x²)+sin²(2x+2^x)；图片：question-images/source-07-007.jpeg
+- M-005-31：M-005-31 洛必达极限：e^x-sinx-1；图片：question-images/source-07-007.jpeg
+- M-005-32：M-005-32 洛必达法则：ln(e^x+x)；图片：question-images/source-07-008.png
+- M-005-33：M-005-33 洛必达法则：指数函数组合；图片：question-images/source-07-009.png
+- M-005-34：M-005-34 xlnx 型极限；图片：question-images/source-07-010.png
+- M-005-35：M-005-35 三角函数极限：tan(πx/2)；图片：question-images/source-07-011.png
+- M-005-36：M-005-36 指数型重要极限；图片：question-images/source-07-012.png
+- M-005-37：M-005-37 反三角函数指数型极限；图片：question-images/source-07-013.png
+- M-005-38：M-005-38 y=x-lnx 单调区间；图片：question-images/source-07-014.png
+- M-005-39：M-005-39 三次函数闭区间最值；图片：question-images/source-07-015.png
+- M-005-40：M-005-40 由闭区间最值求 a、b；图片：question-images/source-07-016.png
+- M-005-41：M-005-41 x+e^(1/x) 单调极值；图片：question-images/source-07-017.png
+- M-005-42：M-005-42 凹凸性和拐点综合；图片：question-images/source-07-018.png
+- M-005-43：M-005-43 二次函数单调性；图片：question-images/source-08-001.png
+- M-005-44：M-005-44 导函数符号判断；图片：question-images/source-08-002.png
+- M-005-45：M-005-45 函数图像与导数正负；图片：question-images/source-08-003.png
+- M-005-46：M-005-46 极值条件判断；图片：question-images/source-08-004.png
+- M-005-47：M-005-47 分数指数函数极值；图片：question-images/source-08-005.png
+- M-005-48：M-005-48 x³/(x-1) 单调极值；图片：question-images/source-08-006.png
+- M-005-49：M-005-49 根式函数单调极值；图片：question-images/source-08-007.png
+- M-005-50：M-005-50 三角函数不等式/单调性证明；图片：question-images/source-08-008.png
+- M-005-51：M-005-51 绝对值函数闭区间最值；图片：question-images/source-08-009.png
+- M-005-52：M-005-52 由最值条件求 a、b 补充；图片：question-images/source-08-010.png
+- M-005-53：M-005-53 x+1/x 最小值；图片：question-images/source-08-011.png

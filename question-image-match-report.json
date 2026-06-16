@@ -1,100 +1,52 @@
 {
-  "generatedAt": "2026-06-15",
-  "recordCount": 103,
-  "matchedRecordCount": 88,
-  "unmatchedRecordCount": 15,
-  "assignedUniqueImageCount": 80,
-  "unassignedImageCount": 37,
+  "generatedAt": "2026-06-16",
+  "recordCount": 149,
+  "matchedRecordCount": 142,
+  "unmatchedRecordCount": 7,
+  "assignedUniqueImageCount": 126,
+  "unassignedImageCount": 36,
   "unmatchedRecords": [
     {
       "id": "M-001-22",
       "title": "M-001-22 左右极限",
       "question": "判断 lim(x→0)|x|/x 是否存在",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
+      "reason": "现有原图中尚未找到可确认的同题题面"
     },
     {
       "id": "M-001-23",
       "title": "M-001-23 无穷大量",
       "question": "判断 lim(x→0)1/x² 是否存在",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
+      "reason": "现有原图中尚未找到可确认的同题题面"
     },
     {
       "id": "M-001-24",
       "title": "M-001-24 重要极限",
       "question": "求 lim(x→0) sin5x/sin2x",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
+      "reason": "现有原图中尚未找到可确认的同题题面"
     },
     {
       "id": "M-001-25",
       "title": "M-001-25 等价无穷小",
       "question": "求 lim(x→0)(1-cosx)/x²",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
+      "reason": "现有原图中尚未找到可确认的同题题面"
     },
     {
       "id": "M-001-26",
       "title": "M-001-26 数列极限",
       "question": "求 lim(n→∞)(7n+1)/(3n-2)",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
+      "reason": "现有原图中尚未找到可确认的同题题面"
     },
     {
       "id": "M-001-27",
       "title": "M-001-27 等价无穷小",
       "question": "求 lim(x→0)tan3x/sin4x",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
+      "reason": "现有原图中尚未找到可确认的同题题面"
     },
     {
       "id": "M-001-28",
       "title": "M-001-28 第二重要极限",
       "question": "求 lim(x→∞)(1-2/x)^x",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
-    },
-    {
-      "id": "M-001-29",
-      "title": "M-001-29 指数极限",
-      "question": "求 lim(n→∞)(5^(n+2)-2^n)/(7^n+5^n)",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
-    },
-    {
-      "id": "M-004-01",
-      "title": "M-004-01 商求导+根式",
-      "question": "求函数 y=x/(1+√x) 的导数",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
-    },
-    {
-      "id": "M-004-02",
-      "title": "M-004-02 复合求导",
-      "question": "求含根式、分式、指数式的函数导数",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
-    },
-    {
-      "id": "M-004-03",
-      "title": "M-004-03 反函数导数",
-      "question": "已知反函数φ(x)，求φ’(a)",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
-    },
-    {
-      "id": "M-004-05",
-      "title": "M-004-05 参数求导",
-      "question": "参数方程求dy/dx",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
-    },
-    {
-      "id": "M-004-07",
-      "title": "M-004-07 参数切线",
-      "question": "参数方程已知x值求切线方程",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
-    },
-    {
-      "id": "M-004-08",
-      "title": "M-004-08 过定点切线",
-      "question": "曲线过某点的切线方程",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
-    },
-    {
-      "id": "M-004-09",
-      "title": "M-004-09 相切",
-      "question": "两曲线相切求参数",
-      "reason": "在现有原图中尚未找到可确认的同题题面"
+      "reason": "现有原图中尚未找到可确认的同题题面"
     }
   ],
   "unassignedImages": [
@@ -493,17 +445,273 @@
       "height": 537,
       "format": "PNG",
       "outputPath": "question-images/source-05-013.png"
+    }
+  ],
+  "newM005Records": [
+    {
+      "id": "M-005-01",
+      "title": "M-005-01 对数根式函数求导",
+      "image": "question-images/source-06-001.png"
     },
     {
-      "sourceKey": "source-05",
-      "sourceDocument": "2f013430-8a6e-4d69-9e15-d01c6336daf9.docx",
-      "localSourceDocument": "05.docx",
-      "originalName": "image20.png",
-      "sha256": "8622e025d5e7387c053ae40be425112acd771f8420820d781860007b7cd42c8d",
-      "width": 971,
-      "height": 538,
-      "format": "PNG",
-      "outputPath": "question-images/source-05-020.png"
+      "id": "M-005-02",
+      "title": "M-005-02 复合函数高阶导数",
+      "image": "question-images/source-06-002.png"
+    },
+    {
+      "id": "M-005-03",
+      "title": "M-005-03 三角函数高阶导数循环",
+      "image": "question-images/source-06-003.png"
+    },
+    {
+      "id": "M-005-04",
+      "title": "M-005-04 对数复合函数微分",
+      "image": "question-images/source-06-004.png"
+    },
+    {
+      "id": "M-005-05",
+      "title": "M-005-05 反三角函数与根式微分",
+      "image": "question-images/source-06-005.png"
+    },
+    {
+      "id": "M-005-06",
+      "title": "M-005-06 隐函数微分法",
+      "image": "question-images/source-06-006.png"
+    },
+    {
+      "id": "M-005-07",
+      "title": "M-005-07 xarctanx 凹凸性判断",
+      "image": "question-images/source-06-007.png"
+    },
+    {
+      "id": "M-005-08",
+      "title": "M-005-08 分式函数单调极值",
+      "image": "question-images/source-06-008.png"
+    },
+    {
+      "id": "M-005-09",
+      "title": "M-005-09 三次函数拐点参数",
+      "image": "question-images/source-06-009.png"
+    },
+    {
+      "id": "M-005-10",
+      "title": "M-005-10 三次函数切线参数",
+      "image": "question-images/source-06-010.png"
+    },
+    {
+      "id": "M-005-11",
+      "title": "M-005-11 一次分式函数渐近线",
+      "image": "question-images/source-06-011.png"
+    },
+    {
+      "id": "M-005-12",
+      "title": "M-005-12 有理函数渐近线",
+      "image": "question-images/source-06-012.png"
+    },
+    {
+      "id": "M-005-13",
+      "title": "M-005-13 二次比一次有理函数渐近线",
+      "image": "question-images/source-06-013.png"
+    },
+    {
+      "id": "M-005-14",
+      "title": "M-005-14 x/(x²+1) 图像综合",
+      "image": "question-images/source-06-014.png"
+    },
+    {
+      "id": "M-005-15",
+      "title": "M-005-15 单调凹凸极值综合表",
+      "image": "question-images/source-06-015.png"
+    },
+    {
+      "id": "M-005-16",
+      "title": "M-005-16 函数草图对应题",
+      "image": "question-images/source-06-016.png"
+    },
+    {
+      "id": "M-005-17",
+      "title": "M-005-17 参数方程 dy/dx",
+      "image": "question-images/source-07-001.jpeg"
+    },
+    {
+      "id": "M-005-18",
+      "title": "M-005-18 椭圆参数方程切线",
+      "image": "question-images/source-07-002.jpeg"
+    },
+    {
+      "id": "M-005-19",
+      "title": "M-005-19 二阶导数：y=√(x√x)",
+      "image": "question-images/source-07-003.jpeg"
+    },
+    {
+      "id": "M-005-20",
+      "title": "M-005-20 二阶导数：根式乘积",
+      "image": "question-images/source-07-003.jpeg"
+    },
+    {
+      "id": "M-005-21",
+      "title": "M-005-21 二阶导数：e^xlnx",
+      "image": "question-images/source-07-003.jpeg"
+    },
+    {
+      "id": "M-005-22",
+      "title": "M-005-22 二阶导数：x/√(1-x²)",
+      "image": "question-images/source-07-003.jpeg"
+    },
+    {
+      "id": "M-005-23",
+      "title": "M-005-23 导数：cot(x/2)",
+      "image": "question-images/source-07-004.jpeg"
+    },
+    {
+      "id": "M-005-24",
+      "title": "M-005-24 导数：xarcsinx",
+      "image": "question-images/source-07-004.jpeg"
+    },
+    {
+      "id": "M-005-25",
+      "title": "M-005-25 微分：幂函数组合",
+      "image": "question-images/source-07-004.jpeg"
+    },
+    {
+      "id": "M-005-26",
+      "title": "M-005-26 微分：xsinxlnx 初见",
+      "image": "question-images/source-07-004.jpeg"
+    },
+    {
+      "id": "M-005-27",
+      "title": "M-005-27 微分：xsinxlnx 订正",
+      "image": "question-images/source-07-005.jpeg"
+    },
+    {
+      "id": "M-005-28",
+      "title": "M-005-28 导数：e^{-x}cos(3-x)",
+      "image": "question-images/source-07-006.jpeg"
+    },
+    {
+      "id": "M-005-29",
+      "title": "M-005-29 洛必达极限：arctanx-x",
+      "image": "question-images/source-07-006.jpeg"
+    },
+    {
+      "id": "M-005-30",
+      "title": "M-005-30 导数：ln(1+x²)+sin²(2x+2^x)",
+      "image": "question-images/source-07-007.jpeg"
+    },
+    {
+      "id": "M-005-31",
+      "title": "M-005-31 洛必达极限：e^x-sinx-1",
+      "image": "question-images/source-07-007.jpeg"
+    },
+    {
+      "id": "M-005-32",
+      "title": "M-005-32 洛必达法则：ln(e^x+x)",
+      "image": "question-images/source-07-008.png"
+    },
+    {
+      "id": "M-005-33",
+      "title": "M-005-33 洛必达法则：指数函数组合",
+      "image": "question-images/source-07-009.png"
+    },
+    {
+      "id": "M-005-34",
+      "title": "M-005-34 xlnx 型极限",
+      "image": "question-images/source-07-010.png"
+    },
+    {
+      "id": "M-005-35",
+      "title": "M-005-35 三角函数极限：tan(πx/2)",
+      "image": "question-images/source-07-011.png"
+    },
+    {
+      "id": "M-005-36",
+      "title": "M-005-36 指数型重要极限",
+      "image": "question-images/source-07-012.png"
+    },
+    {
+      "id": "M-005-37",
+      "title": "M-005-37 反三角函数指数型极限",
+      "image": "question-images/source-07-013.png"
+    },
+    {
+      "id": "M-005-38",
+      "title": "M-005-38 y=x-lnx 单调区间",
+      "image": "question-images/source-07-014.png"
+    },
+    {
+      "id": "M-005-39",
+      "title": "M-005-39 三次函数闭区间最值",
+      "image": "question-images/source-07-015.png"
+    },
+    {
+      "id": "M-005-40",
+      "title": "M-005-40 由闭区间最值求 a、b",
+      "image": "question-images/source-07-016.png"
+    },
+    {
+      "id": "M-005-41",
+      "title": "M-005-41 x+e^(1/x) 单调极值",
+      "image": "question-images/source-07-017.png"
+    },
+    {
+      "id": "M-005-42",
+      "title": "M-005-42 凹凸性和拐点综合",
+      "image": "question-images/source-07-018.png"
+    },
+    {
+      "id": "M-005-43",
+      "title": "M-005-43 二次函数单调性",
+      "image": "question-images/source-08-001.png"
+    },
+    {
+      "id": "M-005-44",
+      "title": "M-005-44 导函数符号判断",
+      "image": "question-images/source-08-002.png"
+    },
+    {
+      "id": "M-005-45",
+      "title": "M-005-45 函数图像与导数正负",
+      "image": "question-images/source-08-003.png"
+    },
+    {
+      "id": "M-005-46",
+      "title": "M-005-46 极值条件判断",
+      "image": "question-images/source-08-004.png"
+    },
+    {
+      "id": "M-005-47",
+      "title": "M-005-47 分数指数函数极值",
+      "image": "question-images/source-08-005.png"
+    },
+    {
+      "id": "M-005-48",
+      "title": "M-005-48 x³/(x-1) 单调极值",
+      "image": "question-images/source-08-006.png"
+    },
+    {
+      "id": "M-005-49",
+      "title": "M-005-49 根式函数单调极值",
+      "image": "question-images/source-08-007.png"
+    },
+    {
+      "id": "M-005-50",
+      "title": "M-005-50 三角函数不等式/单调性证明",
+      "image": "question-images/source-08-008.png"
+    },
+    {
+      "id": "M-005-51",
+      "title": "M-005-51 绝对值函数闭区间最值",
+      "image": "question-images/source-08-009.png"
+    },
+    {
+      "id": "M-005-52",
+      "title": "M-005-52 由最值条件求 a、b 补充",
+      "image": "question-images/source-08-010.png"
+    },
+    {
+      "id": "M-005-53",
+      "title": "M-005-53 x+1/x 最小值",
+      "image": "question-images/source-08-011.png"
     }
   ]
 }

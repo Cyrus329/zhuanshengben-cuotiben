@@ -1,0 +1,20 @@
+{
+  "source": "question-image-match-report.json + built-in records",
+  "recordCount": 96,
+  "matchedRecordCount": 89,
+  "unmatchedRecordCount": 7,
+  "unmatchedRecordIds": [
+    "M-001-22",
+    "M-001-23",
+    "M-001-24",
+    "M-001-25",
+    "M-001-26",
+    "M-001-27",
+    "M-001-28"
+  ],
+  "m005DocxSplitImport": {
+    "imageCount": 45,
+    "addedRecordCount": 53,
+    "idRange": "M-005-01 ~ M-005-53"
+  }
+}

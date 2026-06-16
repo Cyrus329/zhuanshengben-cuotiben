@@ -1,15 +1,24 @@
-const CACHE_NAME = "wrong-question-organizer-image-audit-pwa-v9";
+const CACHE_NAME = "wrong-question-organizer-m005-docx-v6";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260616-image-bundle-1",
-  "./app.js?v=20260616-image-bundle-1",
+  "./styles.css?v=20260616-m005-docx-6",
+  "./app.js?v=20260616-m005-docx-6",
   "./manifest.webmanifest",
   "./question-image-audit.json",
   "./question-image-match-report.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  "./专升本高数错题导入_M001-M004_169题完整重整版.json"
+  "./专升本高数错题导入_M001-M004_169题完整重整版.json",
+  "./专升本高数错题导入_含未分配题库.json",
+  "./未分配题库_新增错题卡.json",
+  "./未分配题库_未入库待核对.json",
+  "./未分配题库全量核对报告.md",
+  "./M系列核对报告.md",
+  "./M系列核对报告.json",
+  "./M005_新上传Word错题_逐题拆分.json",
+  "./M005_新上传Word错题_逐题拆分报告.md",
+  "./M005_新上传Word错题_逐题拆分报告.json"
 ];
 
 self.addEventListener("install", (event) => {
