@@ -10,6 +10,13 @@ const QUESTION_IMAGE_BUNDLE_FILES = [
   "question-image-bundle-2.js",
   "question-image-bundle-3.js",
   "question-image-bundle-4.js",
+  "question-image-bundle-5.js",
+  "question-image-bundle-6.js",
+  "question-image-bundle-7.js",
+  "question-image-bundle-8.js",
+  "question-image-bundle-9.js",
+  "question-image-bundle-10.js",
+  "question-image-bundle-11.js",
 ];
 const SUPABASE_URL = "https://fsizdxkwrxzopkoouipr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_BfWyJfb6c4GrV0JYLXejUg_QnkuhPvw";
@@ -25,7 +32,7 @@ const SUBJECT_ALIASES = new Map([
   ["英语二", "英语"],
 ]);
 
-const BUILTIN_PACKAGE_KEY = "wrong-question-organizer:m005-docx-split-20260616-v6";
+const BUILTIN_PACKAGE_KEY = "wrong-question-organizer:m005-no-folder-bundles-20260616-v7";
 const M001_CORRECTED_QUESTION_IDS = new Set([
   "M-001-30",
   "M-001-33",
