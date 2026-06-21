@@ -1,9 +1,9 @@
-const CACHE_NAME = "wrong-question-organizer-m005-nofolder-v7";
+const CACHE_NAME = "zsb-cuotiben-math-only-20260620-v1";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260616-m005-nofolder-7",
-  "./app.js?v=20260616-m005-nofolder-7",
+  "./styles.css?v=20260617-m006-detailed-2",
+  "./app.js?v=20260617-m006-detailed-2",
   "./manifest.webmanifest",
   "./question-image-audit.json",
   "./question-image-match-report.json",
@@ -18,6 +18,7 @@ const ASSETS = [
   "./question-image-bundle-9.js",
   "./question-image-bundle-10.js",
   "./question-image-bundle-11.js",
+  "./question-image-bundle-12.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./专升本高数错题导入_M001-M004_169题完整重整版.json",
@@ -30,7 +31,10 @@ const ASSETS = [
   "./M005_新上传Word错题_逐题拆分.json",
   "./M005_新上传Word错题_逐题拆分报告.md",
   "./M005_新上传Word错题_逐题拆分报告.json",
-  "./M005_免图片文件夹版说明.md"
+  "./M005_免图片文件夹版说明.md",
+  "./M006_新上传Word错题_导入.json",
+  "./M006_新上传Word错题_导入报告.md",
+  "./M006_新上传Word错题_导入报告.json"
 ];
 
 self.addEventListener("install", (event) => {
