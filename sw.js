@@ -1,4 +1,4 @@
-const CACHE_NAME = "zsb-cuotiben-math-only-20260620-v1";
+const CACHE_NAME = "wrong-question-organizer-subject-classified-v3";
 const ASSETS = [
   "./",
   "./index.html",

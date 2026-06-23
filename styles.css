@@ -1126,3 +1126,17 @@ label span,
     width: 100%;
   }
 }
+
+
+/* 英语/计算机分类清爽版 */
+.record-card { border-radius: 20px; border: 1px solid rgba(15, 118, 110, 0.16); box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08); background: linear-gradient(180deg, #ffffff 0%, #fbfefc 100%); }
+.record-title-row h3 { font-size: 18px; letter-spacing: .01em; }
+.record-meta { color: #64746b; font-size: 13px; line-height: 1.75; }
+.study-card-body { display: grid; gap: 14px; }
+.info-block.question-block { background: #ffffff; border: 1px solid rgba(15, 118, 110, .18); border-left: 6px solid #0f766e; border-radius: 16px; padding: 16px 18px; }
+.info-block.question-block .info-content { font-size: 17px; line-height: 1.9; color: #10231f; white-space: pre-wrap; }
+.info-block.solution-block { background: #fffbeb; border: 1px solid rgba(217, 119, 6, .25); border-left: 6px solid #d97706; border-radius: 16px; padding: 16px 18px; }
+.info-block.solution-block .info-content { font-size: 16px; line-height: 1.85; white-space: pre-wrap; }
+.record-actions .solution-toggle { background: #0f766e; color: #fff; border-color: #0f766e; font-weight: 800; }
+.tag { background: #ecfdf5; color: #065f46; border-color: rgba(6,95,70,.18); }
+@media (max-width: 720px) { .record-title-row h3 { font-size: 16px; } .info-block.question-block .info-content { font-size: 16px; line-height: 1.85; } }
